@@ -27,7 +27,7 @@
         <form>
           <input type="email" placeholder="Email" class="w-full mb-2 p-2 border rounded" />
           <input type="password" placeholder="Mot de passe" class="w-full mb-2 p-2 border rounded" />
-          <button type="submit" class="w-full bg-green-500 text-white p-2 rounded mt-2">Connexion</button>
+          <button type="submit" class="w-full bg-green-700 text-white p-2 rounded mt-2">Connexion</button>
         </form>
       </template>
     </div>
