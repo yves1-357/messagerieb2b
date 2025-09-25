@@ -2,7 +2,15 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
+
+User::create([
+    'name' => 'Test User',
+    'email' => 'test@example.com',
+    'password' => Hash::make('password'),
+]);
 
 return new class extends Migration
 {
