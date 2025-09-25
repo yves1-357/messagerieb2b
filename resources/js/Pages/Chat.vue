@@ -22,7 +22,7 @@
         <div class="bg-indigo-800 p-6 rounded-lg shadow-lg">
             <h2 class="text-xl mb-4">Messagerie Chat</h2>
             <div class="p-4 bg-indigo-700 rounded">
-                Bienvenue dans la messagerie chat !
+                Bienvenue dans la messagerie chat  vue!
             </div>
         </div>
     </div>
