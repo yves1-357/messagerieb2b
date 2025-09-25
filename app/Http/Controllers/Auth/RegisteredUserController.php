@@ -10,8 +10,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Dotenv\Exception\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\Log;
 
 class RegisteredUserController extends Controller
 {
@@ -28,24 +30,66 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): RedirectResponse
+
+     public function register(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ]);
+        Log::info('Début méthode register', ['data' => $request->all()]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+        try {
+            $validated = $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => ['required', 'min:5'],
+            ]);
 
-        event(new Registered($user));
+            $user = User::create([
+                'name' => $validated['name'],
+                'email' => $validated['email'],
+                'password' => Hash::make($validated['password']),
+            ]);
 
-        Auth::login($user);
+            event(new Registered($user));
 
-        return redirect(route('dashboard', absolute: false));
+            Auth::login($user);
+
+            // retourne reponse JSON
+            return response()->json(['success' => true]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+
+            return response()->json([
+                'message' => 'Validation failed',
+                'error' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            // autres erreurs
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
     }
-}
+    //connexion
+    public function login (Request $request){
+        $validated = $request->validate([
+           'email'    => 'required|string|email',
+            'password' => 'required|string',
+        ]);
+
+         $user = User::where('email', $validated['email'])->first();
+
+         if (! $user || ! Hash::check($validated['password'], $user->password)) {
+           return response()->json([
+            'message' => 'Identifiants incorrects.'
+           ], 422);
+
+        }
+
+
+
+        Auth::login($user, $request->boolean('remember'));
+
+         $request->session()->regenerate();
+        return response()->json([
+            'message' => 'Connexion réussie',
+            'user'    => ['id' => $user->id, 'name' => $user->name]
+        ]);
+    }
+    }
+
