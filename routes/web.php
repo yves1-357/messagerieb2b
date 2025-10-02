@@ -18,8 +18,8 @@ Route::get('/health', function (): JsonResponse {
 // Route de diagnostic database
 Route::get('/debug-db', function () {
     try {
-        $tables = \DB::select('SHOW TABLES');
-        $sessionTable = \DB::select("SHOW TABLES LIKE 'sessions'");
+        $tables = DB::select('SHOW TABLES');
+        $sessionTable = DB::select("SHOW TABLES LIKE 'sessions'");
 
         return response()->json([
             'database_connected' => true,
