@@ -7,9 +7,15 @@ nixPkgs = ["nodejs_20", "php82", "php82Packages.composer"]
 
 [phases.install]
 cmds = [
+  "echo '=== Installing PHP dependencies ==='",
   "composer install --no-dev --optimize-autoloader",
+  "echo '=== Installing Node.js dependencies ==='",
   "npm ci --include=dev",
-  "npm run build"
+  "echo '=== Building frontend assets ==='",
+  "npm run build",
+  "echo '=== Checking build output ==='",
+  "ls -la public/build/ || echo 'Build directory missing'",
+  "echo '=== Build phase completed ==='"
 ]
 
 [phases.build]
