@@ -29,10 +29,10 @@ RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd
 # Obtenir dernière version de Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Créer un utilisateur système pour exécuter Composer et Artisan
-RUN useradd -G www-data,root -u 1000 -d /home/www-data www-data
+# Configuration de l'utilisateur www-data (il existe déjà dans l'image de base PHP)
 RUN mkdir -p /home/www-data/.composer && \
-    chown -R www-data:www-data /home/www-data
+    chown -R www-data:www-data /home/www-data && \
+    usermod -a -G root www-data 2>/dev/null || true
 
 # Définir le répertoire de travail
 WORKDIR /var/www
@@ -45,8 +45,8 @@ RUN chown -R www-data:www-data /var/www
 
 # Installer les dépendances PHP et JS
 USER www-data
-RUN composer install --no-interaction --prefer-dist
-RUN npm ci && npm run build
+RUN composer install --no-interaction --prefer-dist --no-dev --optimize-autoloader
+RUN npm ci && NODE_OPTIONS=--max-old-space-size=4096 npm run build
 
 # Exposer le port 9000
 EXPOSE 9000
