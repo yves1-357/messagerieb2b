@@ -9,26 +9,31 @@ export DB_CONNECTION=mysql
 mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views
 chmod -R 775 storage bootstrap/cache
 
-# Nettoyer et optimiser
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
-
-# Attendre que la base de données soit disponible
+# Attendre que la base de données soit disponible AVANT de nettoyer le cache
 echo "Checking database connection..."
 until php artisan migrate --dry-run >/dev/null 2>&1; do
   echo "Waiting for database..."
   sleep 3
 done
 
-# Exécuter les migrations
+# Exécuter les migrations d'abord
 echo "Running database migrations..."
 php artisan migrate --force
 
+# Maintenant nettoyer et optimiser (après que les tables existent)
+echo "Clearing caches..."
+php artisan config:clear
+php artisan cache:clear
+php artisan view:clear
+
 # Optimiser pour la production
+echo "Optimizing for production..."
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
+
+# Créer le lien symbolique pour le stockage
+php artisan storage:link || true
 
 # Démarrer le serveur avec gestion du port
 PORT_NUMBER=${PORT:-8000}
