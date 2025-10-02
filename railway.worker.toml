@@ -7,3 +7,6 @@ restartPolicyMaxRetries = 3
 # Pas de healthcheck pour les workers
 healthcheckPath = ""
 healthcheckTimeout = 0
+healthcheckInterval = 0
+# Commande de démarrage spécifique pour worker
+startCommand = "bash worker-start.sh"
