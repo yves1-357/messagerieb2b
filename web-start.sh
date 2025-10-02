@@ -9,6 +9,10 @@ export DB_CONNECTION=mysql
 mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views
 chmod -R 775 storage bootstrap/cache
 
+# Builder les assets frontend
+echo "Building frontend assets..."
+npm run build
+
 # Attendre que la base de données soit disponible (connexion seulement)
 echo "Checking database connection..."
 until php artisan tinker --execute="DB::connection()->getPdo(); echo 'Connected';" >/dev/null 2>&1; do
