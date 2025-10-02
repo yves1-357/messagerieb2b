@@ -1,0 +1,7 @@
+[phases.setup]
+cmds = [
+  "mkdir -p /app/tmp/nginx/client-body"
+]
+
+[start]
+cmd = "sh start.sh && vendor/bin/heroku-php-apache2 public/"
