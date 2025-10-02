@@ -13,21 +13,36 @@
 
         <!-- Scripts -->
         @routes
-        @if(file_exists(public_path('build/manifest.json')))
-            @php
-                $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true);
-                $appJs = $manifest['resources/js/app.js']['file'] ?? null;
-                $appCss = $manifest['resources/js/app.js']['css'][0] ?? null;
-            @endphp
-            @if($appCss)
-                <link rel="stylesheet" href="{{ asset('build/' . $appCss) }}">
+        @php
+            $manifestPath = public_path('build/manifest.json');
+            if (file_exists($manifestPath)) {
+                $manifest = json_decode(file_get_contents($manifestPath), true);
+                $appEntry = $manifest['resources/js/app.js'] ?? null;
+            }
+        @endphp
+
+        @if(isset($appEntry))
+            {{-- CSS --}}
+            @if(isset($appEntry['css']))
+                @foreach($appEntry['css'] as $css)
+                    <link rel="stylesheet" href="{{ asset('build/' . $css) }}">
+                @endforeach
             @endif
-            @if($appJs)
-                <script type="module" src="{{ asset('build/' . $appJs) }}"></script>
-            @endif
+
+            {{-- Script principal --}}
+            <script type="module" src="{{ asset('build/' . $appEntry['file']) }}"></script>
+
+            {{-- Données Inertia --}}
+            <script>
+                window.Laravel = {
+                    csrfToken: '{{ csrf_token() }}',
+                };
+            </script>
         @else
-            @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
+            {{-- Fallback vers Vite --}}
+            @vite(['resources/js/app.js'])
         @endif
+
         @inertiaHead
     </head>
     <body class="font-sans antialiased">

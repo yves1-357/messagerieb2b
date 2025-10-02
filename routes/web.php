@@ -47,13 +47,32 @@ Route::get('/debug-assets', function () {
         'manifest_exists' => file_exists($manifestPath),
         'build_contents' => is_dir($buildPath) ? scandir($buildPath) : 'Directory not found',
         'manifest_content' => file_exists($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : 'Manifest not found',
-        'vite_assets' => function_exists('vite') ? 'Vite helper available' : 'Vite helper missing'
+        'vite_assets' => function_exists('vite') ? 'Vite helper available' : 'Vite helper missing',
+        'app_js_url' => asset('build/assets/app-Dj4aWNA6.js'),
+        'app_css_url' => asset('build/assets/app-D9Zt1r51.css')
     ];
 
     return '<h1>Debug Assets</h1><pre>' . json_encode($info, JSON_PRETTY_PRINT) . '</pre>';
 });
 
-Route::post('/register', [RegisteredUserController::class, 'register']);
+// Route de test HTML pur avec Inertia
+Route::get('/test-html', function () {
+    return '<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Test HTML Direct</title>
+    <link rel="stylesheet" href="' . asset('build/assets/app-D9Zt1r51.css') . '">
+</head>
+<body>
+    <div id="app" data-page=\'{"component":"SimpleTest","props":{},"url":"/test-html","version":"1"}\'>
+        <h1>Chargement...</h1>
+    </div>
+    <script type="module" src="' . asset('build/assets/app-Dj4aWNA6.js') . '"></script>
+</body>
+</html>';
+});Route::post('/register', [RegisteredUserController::class, 'register']);
 
 // Routes explicites pour login et register
 Route::post('/login', [RegisteredUserController::class, 'login'])->name('login');
@@ -89,6 +108,7 @@ Route::get('/', function () {
                 <p><a href="/test">✅ Test PHP Simple</a></p>
                 <p><a href="/debug-assets">🔍 Debug Assets Vite</a></p>
                 <p><a href="/test-cdn">🧪 Test Vue.js CDN</a></p>
+                <p><a href="/test-html">🚀 Test HTML Direct</a></p>
                 <p><a href="/simple-test">❌ Test Inertia Simple</a></p>
                 <p><a href="/test-inertia">❌ Test Inertia Complet</a></p>
             </div>';
