@@ -9,12 +9,14 @@ export DB_CONNECTION=mysql
 mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views
 chmod -R 775 storage bootstrap/cache
 
-# Attendre que la base de données soit disponible AVANT de nettoyer le cache
+# Attendre que la base de données soit disponible (connexion seulement)
 echo "Checking database connection..."
-until php artisan migrate --dry-run >/dev/null 2>&1; do
+until php artisan tinker --execute="DB::connection()->getPdo(); echo 'Connected';" >/dev/null 2>&1; do
   echo "Waiting for database..."
   sleep 3
 done
+
+echo "Database connected! Running migrations..."
 
 # Exécuter les migrations d'abord
 echo "Running database migrations..."
