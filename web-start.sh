@@ -12,6 +12,15 @@ chmod -R 775 storage bootstrap/cache
 # Builder les assets frontend
 echo "Building frontend assets..."
 npm run build
+echo "✅ Build completed"
+
+# Vérifier que les assets ont été générés
+if [ -d "public/build" ]; then
+    echo "✅ Assets directory exists"
+    ls -la public/build/
+else
+    echo "❌ Assets directory missing!"
+fi
 
 # Attendre que la base de données soit disponible (connexion seulement)
 echo "Checking database connection..."

@@ -14,6 +14,19 @@ Route::get('/health', function (): JsonResponse {
     return response()->json(['status' => 'ok'], 200);
 });
 
+// Route de test simple
+Route::get('/test', function () {
+    return '<h1>Laravel fonctionne !</h1><p>Version: ' . app()->version() . '</p>';
+});
+
+// Route de test Inertia
+Route::get('/test-inertia', function () {
+    return Inertia::render('TestPage', [
+        'message' => 'Inertia fonctionne !',
+        'timestamp' => now()->toISOString()
+    ]);
+});
+
 Route::post('/register', [RegisteredUserController::class, 'register']);
 
 // Routes explicites pour login et register
@@ -42,7 +55,10 @@ Route::middleware('auth')->group(function () {
 
 });
 Route::get('/', function () {
-    return Inertia::render('Authpage');
+    return '<h1>🚀 Laravel fonctionne sur Railway !</h1>
+            <p><strong>Timestamp:</strong> ' . now() . '</p>
+            <p><strong>Environment:</strong> ' . app()->environment() . '</p>
+            <p><a href="/test">Test simple</a> | <a href="/test-inertia">Test Inertia</a></p>';
 })->name('home');
 
 
