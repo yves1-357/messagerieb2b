@@ -34,6 +34,12 @@ class GoogleAuthController extends Controller
         try {
             $googleUser = Socialite::driver('google')->user();
 
+            Log::info('Google user data: ', [
+                'name' => $googleUser->name,
+                'email' => $googleUser->email,
+                'id' => $googleUser->id
+            ]);
+
             // Trouver ou créer l'utilisateur
             $user = User::where('email', $googleUser->email)->first();
 
@@ -46,17 +52,32 @@ class GoogleAuthController extends Controller
                     'password' => Hash::make(rand(1,10000)), // Mot de passe aléatoire
                     'email_verified_at' => now(),
                 ]);
+                Log::info('New user created: ' . $user->id);
+            } else {
+                // Mettre à jour le google_id si nécessaire
+                if (!$user->google_id) {
+                    $user->update(['google_id' => $googleUser->id]);
+                }
+                Log::info('Existing user found: ' . $user->id);
             }
 
-            // Connecter l'utilisateur
-            Auth::login($user);
+            // Connecter l'utilisateur avec remember
+            Auth::login($user, true);
+
+            // Régénérer la session pour sécurité
+            request()->session()->regenerate();
+
+            Log::info('User logged in successfully, redirecting to chat');
 
             // Rediriger vers la page de chat
             return redirect('/chat');
 
         } catch (\Exception $e) {
+            Log::error('Google Auth Error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+
             // En cas d'erreur, rediriger vers login avec un message d'erreur
-            return redirect('/login')->with('error', 'Erreur lors de la connexion avec Google.');
+            return redirect('/')->with('error', 'Erreur lors de la connexion avec Google: ' . $e->getMessage());
         }
     }
 }
