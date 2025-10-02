@@ -113,17 +113,39 @@ Route::get('/debug-sessions', function () {
         // Vérifier si la table sessions existe
         $tablesExist = DB::select("SHOW TABLES LIKE 'sessions'");
 
+        // Compter les sessions en DB
+        $sessionCount = 0;
+        $currentSessionInDb = null;
+        if (!empty($tablesExist)) {
+            $sessionCount = DB::table('sessions')->count();
+            $currentSessionInDb = DB::table('sessions')
+                ->where('id', session()->getId())
+                ->first();
+        }
+
         $info = [
             'session_driver' => $sessionDriver,
             'database_name' => $dbConnection,
             'sessions_table_exists' => !empty($tablesExist),
             'session_id' => session()->getId(),
-            'can_write_session' => true
+            'total_sessions_in_db' => $sessionCount,
+            'current_session_in_db' => $currentSessionInDb ? 'EXISTS' : 'NOT_FOUND',
+            'session_config' => [
+                'lifetime' => config('session.lifetime'),
+                'path' => config('session.path'),
+                'domain' => config('session.domain'),
+                'secure' => config('session.secure'),
+                'http_only' => config('session.http_only'),
+                'same_site' => config('session.same_site')
+            ],
+            'cookies' => request()->cookies->all()
         ];
 
         // Test d'écriture de session
-        session(['test_key' => 'test_value']);
+        session(['test_key' => 'test_value_' . time()]);
+        session()->save();
         $info['session_test_value'] = session('test_key');
+        $info['all_session_data'] = session()->all();
 
         return '<h1>Debug Sessions</h1><pre>' . json_encode($info, JSON_PRETTY_PRINT) . '</pre>';
     } catch (\Exception $e) {
@@ -175,8 +197,38 @@ Route::get('/', function () {
     return Inertia::render('Authpage');
 })->name('home');
 
+// Route pour tester la persistance de session
+Route::get('/test-session-persistence', function () {
+    $step = request()->get('step', '1');
+
+    if ($step == '1') {
+        // Étape 1: Sauvegarder dans la session
+        session(['persistence_test' => 'session_saved_at_' . time()]);
+        session(['manual_auth_test' => 'user_123']);
+        session()->save();
+
+        return '<h1>Étape 1: Session sauvegardée</h1>
+                <p>Session ID: ' . session()->getId() . '</p>
+                <p>Valeur sauvée: ' . session('persistence_test') . '</p>
+                <p><a href="/test-session-persistence?step=2">Tester la persistance →</a></p>';
+    }
+
+    if ($step == '2') {
+        // Étape 2: Vérifier si la session persiste
+        $persistenceTest = session('persistence_test');
+        $manualAuthTest = session('manual_auth_test');
+
+        return '<h1>Étape 2: Test de persistance</h1>
+                <p>Session ID: ' . session()->getId() . '</p>
+                <p>Valeur récupérée: ' . ($persistenceTest ?? 'NULL') . '</p>
+                <p>Auth manuelle: ' . ($manualAuthTest ?? 'NULL') . '</p>
+                <p>Persistance: ' . ($persistenceTest ? '✅ Fonctionne' : '❌ Échoue') . '</p>
+                <p><a href="/test-session-persistence?step=1">Recommencer</a></p>';
+    }
+});
+
 // Route catch-all pour SPA - DOIT ÊTRE EN DERNIER
 Route::get('/{any}', function () {
     return Inertia::render('Authpage');
-})->where('any', '^(?!debug-|create-sessions-table|auth-success).*$');
+})->where('any', '^(?!debug-|create-sessions-table|auth-success|test-session-persistence).*$');
 
