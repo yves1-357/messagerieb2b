@@ -11,7 +11,23 @@ chmod -R 775 storage bootstrap/cache
 
 # Builder les assets frontend
 echo "Building frontend assets..."
-npm run build
+echo "Node version: $(node --version)"
+echo "NPM version: $(npm --version)"
+
+# Nettoyer avant de builder
+rm -rf public/build
+rm -rf node_modules/.vite
+
+# Installer les dépendances si nécessaire
+if [ ! -d "node_modules" ]; then
+    echo "Installing npm dependencies..."
+    npm ci --only=production
+fi
+
+# Build avec verbose
+echo "Running Vite build..."
+npm run build --verbose
+
 echo "✅ Build completed"
 
 # Vérifier que les assets ont été générés
@@ -20,6 +36,8 @@ if [ -d "public/build" ]; then
     ls -la public/build/
 else
     echo "❌ Assets directory missing!"
+    echo "Checking if npm build failed..."
+    npm run build || echo "❌ NPM build failed"
 fi
 
 # Attendre que la base de données soit disponible (connexion seulement)

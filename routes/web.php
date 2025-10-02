@@ -27,6 +27,11 @@ Route::get('/test-inertia', function () {
     ]);
 });
 
+// Route de test ultra-simple
+Route::get('/simple-test', function () {
+    return Inertia::render('SimpleTest');
+});
+
 Route::post('/register', [RegisteredUserController::class, 'register']);
 
 // Routes explicites pour login et register
@@ -58,7 +63,7 @@ Route::get('/', function () {
     return '<h1>🚀 Laravel fonctionne sur Railway !</h1>
             <p><strong>Timestamp:</strong> ' . now() . '</p>
             <p><strong>Environment:</strong> ' . app()->environment() . '</p>
-            <p><a href="/test">Test simple</a> | <a href="/test-inertia">Test Inertia</a></p>';
+            <p><a href="/test">Test simple</a> | <a href="/simple-test">Test Inertia Simple</a> | <a href="/test-inertia">Test Inertia Complet</a></p>';
 })->name('home');
 
 
