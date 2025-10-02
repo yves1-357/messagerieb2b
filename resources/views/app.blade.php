@@ -13,7 +13,21 @@
 
         <!-- Scripts -->
         @routes
-        @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
+        @if(file_exists(public_path('build/manifest.json')))
+            @php
+                $manifest = json_decode(file_get_contents(public_path('build/manifest.json')), true);
+                $appJs = $manifest['resources/js/app.js']['file'] ?? null;
+                $appCss = $manifest['resources/js/app.js']['css'][0] ?? null;
+            @endphp
+            @if($appCss)
+                <link rel="stylesheet" href="{{ asset('build/' . $appCss) }}">
+            @endif
+            @if($appJs)
+                <script type="module" src="{{ asset('build/' . $appJs) }}"></script>
+            @endif
+        @else
+            @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
+        @endif
         @inertiaHead
     </head>
     <body class="font-sans antialiased">
