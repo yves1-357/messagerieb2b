@@ -30,6 +30,10 @@ else
     npm install
 fi
 
+# Installer les dépendances si nécessaire
+echo "Installing all dependencies including dev dependencies..."
+npm install
+
 # Nettoyer avant de builder
 echo "Cleaning previous builds..."
 rm -rf public/build
