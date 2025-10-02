@@ -4,9 +4,10 @@ builder = "nixpacks"
 buildCommand = "npm run build"
 
 [deploy]
-healthcheckPath = "/"
-healthcheckTimeout = 100
+healthcheckPath = "/health"
+healthcheckTimeout = 200
 restartPolicyType = "ON_FAILURE"
+startCommand = "php artisan serve --host=0.0.0.0 --port=$PORT"
 
 [nixpacks]
 nodeVersion = "20.19.0"

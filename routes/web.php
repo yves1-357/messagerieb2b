@@ -7,6 +7,12 @@ use Inertia\Inertia;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Auth\GoogleAuthController;
+use Illuminate\Http\JsonResponse;
+
+// Route de healthcheck pour Railway
+Route::get('/health', function (): JsonResponse {
+    return response()->json(['status' => 'ok'], 200);
+});
 
 Route::post('/register', [RegisteredUserController::class, 'register']);
 
