@@ -16,6 +16,14 @@
       <button type="button" @click="handleLogin" :disabled="chargement" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded transition">
         Se connecter
       </button>
+
+      <div class="mt-4 text-center">
+        <span class="text-gray-400 text-sm">ou</span>
+      </div>
+
+      <a href="/auth/google" class="block mt-4 text-center hover:opacity-80 transition">
+        <img src="https://developers.google.com/identity/images/btn_google_signin_dark_normal_web.png" alt="Sign in with Google" class="mx-auto">
+      </a>
     </form>
 
     <p class="text-gray-400 mt-6 text-center">

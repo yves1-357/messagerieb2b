@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Auth\GoogleAuthController;
 
 Route::post('/register', [RegisteredUserController::class, 'register']);
 
@@ -16,6 +17,9 @@ Route::get('/register', function () {
     return Inertia::render('Authpage');
 })->name('register');
 
+//route pour authentification google
+Route::get('auth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
+Route::get('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
