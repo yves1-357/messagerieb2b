@@ -73,8 +73,8 @@ class GoogleAuthController extends Controller
 
             Log::info('User logged in successfully, redirecting to chat');
 
-            // Test: redirection vers route sans middleware
-            return redirect('/auth-success');
+            // Redirection directe vers chat
+            return redirect('/chat');
 
         } catch (\Exception $e) {
             Log::error('Google Auth Error: ' . $e->getMessage());

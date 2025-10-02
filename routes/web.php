@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Auth\GoogleAuthController;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 // Route de healthcheck pour Railway
 Route::get('/health', function (): JsonResponse {
@@ -54,6 +55,14 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/chat', function (){
+    Log::info('Accessing /chat route. Auth check: ' . (Auth::check() ? 'true' : 'false'));
+    Log::info('User ID: ' . (Auth::id() ?? 'null'));
+
+    if (!Auth::check()) {
+        Log::warning('User not authenticated, redirecting to home');
+        return redirect('/')->with('error', 'Vous devez être connecté pour accéder au chat');
+    }
+
     return Inertia::render('Chat');
 })->middleware(['auth'])->name('chat');
 
@@ -61,6 +70,20 @@ Route::get('/chat', function (){
 Route::get('/auth-success', function () {
     return Inertia::render('Chat');
 })->name('auth.success');
+
+// Route de test auth avec vérification
+Route::get('/test-auth', function () {
+    $isAuth = Auth::check();
+    $user = Auth::user();
+
+    return response()->json([
+        'authenticated' => $isAuth,
+        'user_id' => $user ? $user->id : null,
+        'user_name' => $user ? $user->name : null,
+        'session_id' => session()->getId(),
+        'message' => $isAuth ? 'Utilisateur connecté' : 'Utilisateur non connecté'
+    ]);
+});
 
 // Route de diagnostic sessions
 Route::get('/debug-sessions', function () {
