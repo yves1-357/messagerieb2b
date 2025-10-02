@@ -32,6 +32,10 @@ class GoogleAuthController extends Controller
     public function handleGoogleCallback()
     {
         try {
+            Log::info('=== DÉBUT CALLBACK GOOGLE ===');
+            Log::info('URL actuelle: ' . request()->fullUrl());
+            Log::info('Paramètres reçus: ', request()->all());
+
             $googleUser = Socialite::driver('google')->user();
 
             Log::info('Google user data: ', [
@@ -61,16 +65,17 @@ class GoogleAuthController extends Controller
                 Log::info('Existing user found: ' . $user->id);
             }
 
+            Log::info('AVANT Auth::login - Session ID: ' . request()->session()->getId());
+
             // Connecter l'utilisateur avec remember
             Auth::login($user, true);
 
             // Forcer la sauvegarde de la session SANS régénération pour test
             request()->session()->save();
 
-            // Debug: vérifier que l'utilisateur est bien connecté
-            Log::info('Auth check after login: ' . (Auth::check() ? 'true' : 'false'));
-            Log::info('Authenticated user ID: ' . (Auth::id() ?? 'null'));
-            Log::info('Session ID after login: ' . request()->session()->getId());
+            Log::info('APRÈS Auth::login - Auth check: ' . (Auth::check() ? 'true' : 'false'));
+            Log::info('APRÈS Auth::login - User ID: ' . (Auth::id() ?? 'null'));
+            Log::info('APRÈS Auth::login - Session ID: ' . request()->session()->getId());
 
             // Test: Sauvegarder manuellement l'auth dans la session
             session(['auth_user_id' => $user->id]);
@@ -78,16 +83,20 @@ class GoogleAuthController extends Controller
             session()->save();
 
             Log::info('Manual session saved with user: ' . $user->id);
+            Log::info('Session finale: ', session()->all());
 
             Log::info('User logged in successfully, redirecting to chat');
 
             // Pause pour s'assurer que la session est sauvegardée
             sleep(1);
 
+            Log::info('=== REDIRECTION VERS /chat ===');
+
             // Redirection directe vers chat
             return redirect('/chat');
 
         } catch (\Exception $e) {
+            Log::error('=== ERREUR GOOGLE AUTH ===');
             Log::error('Google Auth Error: ' . $e->getMessage());
             Log::error('Stack trace: ' . $e->getTraceAsString());
 

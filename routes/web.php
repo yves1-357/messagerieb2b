@@ -50,6 +50,26 @@ Route::get('/register', function () {
 Route::get('auth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
 Route::get('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
+// Route de test pour diagnostiquer les problèmes Google Auth
+Route::get('/debug-google-auth', function () {
+    $info = [
+        'google_client_id' => config('services.google.client_id') ? 'CONFIGURÉ' : 'MANQUANT',
+        'google_client_secret' => config('services.google.client_secret') ? 'CONFIGURÉ' : 'MANQUANT',
+        'google_redirect' => config('services.google.redirect'),
+        'app_url' => config('app.url'),
+        'current_url' => request()->url(),
+        'session_status' => [
+            'session_id' => session()->getId(),
+            'auth_check' => Auth::check(),
+            'manual_auth' => session('auth_user_id'),
+        ],
+        'recent_logs' => 'Vérifiez les logs Railway pour les détails'
+    ];
+
+    return '<h1>Debug Google Auth</h1><pre>' . json_encode($info, JSON_PRETTY_PRINT) . '</pre>
+            <p><a href="/auth/google">Tester Google Auth</a></p>';
+});
+
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
