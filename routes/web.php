@@ -120,7 +120,9 @@ Route::get('/create-sessions-table', function () {
     } catch (\Exception $e) {
         return '<h1>❌ Erreur lors de la création</h1><p>' . $e->getMessage() . '</p>';
     }
-});Route::middleware('auth')->group(function () {
+});
+
+Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -131,8 +133,8 @@ Route::get('/', function () {
     return Inertia::render('Authpage');
 })->name('home');
 
-// Route catch-all pour SPA
+// Route catch-all pour SPA - DOIT ÊTRE EN DERNIER
 Route::get('/{any}', function () {
     return Inertia::render('Authpage');
-})->where('any', '.*');
+})->where('any', '^(?!debug-|create-sessions-table|auth-success).*$');
 
