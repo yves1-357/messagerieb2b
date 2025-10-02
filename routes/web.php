@@ -76,7 +76,9 @@ Route::get('/debug-google-auth', function () {
 
     return '<h1>Debug Google Auth</h1><pre>' . json_encode($info, JSON_PRETTY_PRINT) . '</pre>
             <p><a href="/auth/google">Tester Google Auth</a></p>
-            <p><a href="/test-callback">Tester route callback</a></p>';
+            <p><a href="/test-callback">Tester route callback</a></p>
+            <p><a href="/run-migrations">🔧 Créer tables utilisateurs</a></p>
+            <p><a href="/debug-db">📊 État base de données</a></p>';
 });
 
 Route::get('/dashboard', function () {
@@ -215,6 +217,56 @@ Route::get('/create-sessions-table', function () {
     }
 });
 
+// Route pour exécuter les migrations Laravel
+Route::get('/run-migrations', function () {
+    try {
+        // Vérifier si les tables principales existent
+        $userTableExists = DB::select("SHOW TABLES LIKE 'users'");
+        $existingTables = DB::select('SHOW TABLES');
+
+        $info = [
+            'users_table_exists' => !empty($userTableExists),
+            'total_tables' => count($existingTables),
+            'existing_tables' => array_map(function($table) {
+                return array_values((array)$table)[0];
+            }, $existingTables)
+        ];
+
+        if (!empty($userTableExists)) {
+            return '<h1>✅ Table users existe déjà</h1>
+                    <pre>' . json_encode($info, JSON_PRETTY_PRINT) . '</pre>
+                    <p><a href="/auth/google">Tester Google Auth</a></p>';
+        }
+
+        // Créer la table users manuellement avec les champs nécessaires
+        DB::statement('
+            CREATE TABLE users (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                email VARCHAR(255) NOT NULL UNIQUE,
+                email_verified_at TIMESTAMP NULL,
+                password VARCHAR(255) NOT NULL,
+                google_id VARCHAR(255) NULL,
+                remember_token VARCHAR(100) NULL,
+                created_at TIMESTAMP NULL,
+                updated_at TIMESTAMP NULL,
+                INDEX users_email_index (email),
+                INDEX users_google_id_index (google_id)
+            )
+        ');
+
+        return '<h1>✅ Table users créée avec succès !</h1>
+                <p>Vous pouvez maintenant tester Google Auth</p>
+                <p><a href="/auth/google">Tester Google Auth</a></p>
+                <p><a href="/debug-db">Vérifier la base de données</a></p>';
+
+    } catch (\Exception $e) {
+        return '<h1>❌ Erreur lors de la création des tables</h1>
+                <p>Erreur: ' . $e->getMessage() . '</p>
+                <p><a href="/debug-db">Vérifier la base de données</a></p>';
+    }
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -259,5 +311,5 @@ Route::get('/test-session-persistence', function () {
 // Route catch-all pour SPA - DOIT ÊTRE EN DERNIER
 Route::get('/{any}', function () {
     return Inertia::render('Authpage');
-})->where('any', '^(?!debug-|create-sessions-table|auth-success|test-session-persistence).*$');
+})->where('any', '^(?!debug-|create-sessions-table|auth-success|test-session-persistence|run-migrations).*$');
 
