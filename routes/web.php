@@ -32,6 +32,11 @@ Route::get('/simple-test', function () {
     return Inertia::render('SimpleTest');
 });
 
+// Route de test CDN
+Route::get('/test-cdn', function () {
+    return response()->file(public_path('test-cdn.html'));
+});
+
 Route::post('/register', [RegisteredUserController::class, 'register']);
 
 // Routes explicites pour login et register
@@ -63,7 +68,13 @@ Route::get('/', function () {
     return '<h1>🚀 Laravel fonctionne sur Railway !</h1>
             <p><strong>Timestamp:</strong> ' . now() . '</p>
             <p><strong>Environment:</strong> ' . app()->environment() . '</p>
-            <p><a href="/test">Test simple</a> | <a href="/simple-test">Test Inertia Simple</a> | <a href="/test-inertia">Test Inertia Complet</a></p>';
+            <div style="margin: 20px 0;">
+                <h3>Tests disponibles :</h3>
+                <p><a href="/test">✅ Test PHP Simple</a></p>
+                <p><a href="/test-cdn">🧪 Test Vue.js CDN</a></p>
+                <p><a href="/simple-test">❌ Test Inertia Simple</a></p>
+                <p><a href="/test-inertia">❌ Test Inertia Complet</a></p>
+            </div>';
 })->name('home');
 
 
