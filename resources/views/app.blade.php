@@ -25,12 +25,12 @@
             {{-- CSS --}}
             @if(isset($appEntry['css']))
                 @foreach($appEntry['css'] as $css)
-                    <link rel="stylesheet" href="{{ asset('build/' . $css) }}">
+                    <link rel="stylesheet" href="{{ secure_asset('build/' . $css) }}">
                 @endforeach
             @endif
 
             {{-- Script principal --}}
-            <script type="module" src="{{ asset('build/' . $appEntry['file']) }}"></script>
+            <script type="module" src="{{ secure_asset('build/' . $appEntry['file']) }}"></script>
 
             {{-- Données Inertia --}}
             <script>
@@ -41,9 +41,7 @@
         @else
             {{-- Fallback vers Vite --}}
             @vite(['resources/js/app.js'])
-        @endif
-
-        @inertiaHead
+        @endif        @inertiaHead
     </head>
     <body class="font-sans antialiased">
         @inertia
