@@ -89,7 +89,38 @@ Route::get('/debug-sessions', function () {
     }
 });
 
-Route::middleware('auth')->group(function () {
+// Route pour créer la table sessions manuellement
+Route::get('/create-sessions-table', function () {
+    try {
+        // Vérifier si la table existe déjà
+        $exists = DB::select("SHOW TABLES LIKE 'sessions'");
+        if (!empty($exists)) {
+            return '<h1>Table sessions existe déjà</h1>';
+        }
+
+        // Créer la table sessions
+        DB::statement('
+            CREATE TABLE sessions (
+                id VARCHAR(255) NOT NULL,
+                user_id BIGINT UNSIGNED NULL,
+                ip_address VARCHAR(45) NULL,
+                user_agent TEXT NULL,
+                payload LONGTEXT NOT NULL,
+                last_activity INT NOT NULL,
+                PRIMARY KEY (id),
+                INDEX sessions_user_id_index (user_id),
+                INDEX sessions_last_activity_index (last_activity)
+            )
+        ');
+
+        return '<h1>✅ Table sessions créée avec succès !</h1>
+                <p><a href="/debug-sessions">Vérifier les sessions</a></p>
+                <p><a href="/debug-db">Vérifier la base de données</a></p>';
+
+    } catch (\Exception $e) {
+        return '<h1>❌ Erreur lors de la création</h1><p>' . $e->getMessage() . '</p>';
+    }
+});Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
