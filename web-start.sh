@@ -10,35 +10,55 @@ mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage
 chmod -R 775 storage bootstrap/cache
 
 # Builder les assets frontend
-echo "Building frontend assets..."
+echo "=== DEBUGGING ASSETS BUILD ==="
 echo "Node version: $(node --version)"
 echo "NPM version: $(npm --version)"
+echo "Current directory: $(pwd)"
+echo "Checking package.json..."
+if [ -f "package.json" ]; then
+    echo "✅ package.json exists"
+    cat package.json | grep -A 5 -B 5 '"scripts"'
+else
+    echo "❌ package.json missing!"
+fi
+
+echo "Checking node_modules..."
+if [ -d "node_modules" ]; then
+    echo "✅ node_modules exists"
+else
+    echo "❌ node_modules missing! Installing..."
+    npm install
+fi
 
 # Nettoyer avant de builder
+echo "Cleaning previous builds..."
 rm -rf public/build
 rm -rf node_modules/.vite
 
-# Installer les dépendances si nécessaire
-if [ ! -d "node_modules" ]; then
-    echo "Installing npm dependencies..."
-    npm ci --only=production
-fi
-
 # Build avec verbose
 echo "Running Vite build..."
-npm run build --verbose
+npm run build 2>&1 | tee build.log
 
-echo "✅ Build completed"
+echo "=== BUILD COMPLETED ==="
 
 # Vérifier que les assets ont été générés
 if [ -d "public/build" ]; then
     echo "✅ Assets directory exists"
+    echo "Contents of public/build:"
     ls -la public/build/
+    echo "=== Manifest content ==="
+    if [ -f "public/build/manifest.json" ]; then
+        cat public/build/manifest.json
+    else
+        echo "❌ manifest.json missing!"
+    fi
 else
     echo "❌ Assets directory missing!"
-    echo "Checking if npm build failed..."
-    npm run build || echo "❌ NPM build failed"
+    echo "Build log contents:"
+    cat build.log || echo "No build log found"
 fi
+
+echo "=== END ASSETS DEBUG ==="
 
 # Attendre que la base de données soit disponible (connexion seulement)
 echo "Checking database connection..."
