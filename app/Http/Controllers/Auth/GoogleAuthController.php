@@ -64,14 +64,18 @@ class GoogleAuthController extends Controller
             // Connecter l'utilisateur avec remember
             Auth::login($user, true);
 
-            // Régénérer la session pour sécurité
-            request()->session()->regenerate();
+            // Forcer la sauvegarde de la session SANS régénération pour test
+            request()->session()->save();
 
             // Debug: vérifier que l'utilisateur est bien connecté
             Log::info('Auth check after login: ' . (Auth::check() ? 'true' : 'false'));
             Log::info('Authenticated user ID: ' . (Auth::id() ?? 'null'));
+            Log::info('Session ID after login: ' . request()->session()->getId());
 
             Log::info('User logged in successfully, redirecting to chat');
+
+            // Pause pour s'assurer que la session est sauvegardée
+            sleep(1);
 
             // Redirection directe vers chat
             return redirect('/chat');
