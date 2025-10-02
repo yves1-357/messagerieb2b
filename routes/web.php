@@ -50,6 +50,14 @@ Route::get('/register', function () {
 Route::get('auth/google', [GoogleAuthController::class, 'redirectToGoogle'])->name('auth.google');
 Route::get('auth/google/callback', [GoogleAuthController::class, 'handleGoogleCallback'])->name('auth.google.callback');
 
+// Route de test simple pour vérifier si Google appelle notre callback
+Route::get('/test-callback', function () {
+    Log::info('=== TEST CALLBACK APPELÉ ===');
+    Log::info('URL: ' . request()->fullUrl());
+    Log::info('Paramètres: ', request()->all());
+    return '<h1>Callback Test</h1><p>Cette route a été appelée. Vérifiez les logs Railway.</p>';
+});
+
 // Route de test pour diagnostiquer les problèmes Google Auth
 Route::get('/debug-google-auth', function () {
     $info = [
@@ -67,7 +75,8 @@ Route::get('/debug-google-auth', function () {
     ];
 
     return '<h1>Debug Google Auth</h1><pre>' . json_encode($info, JSON_PRETTY_PRINT) . '</pre>
-            <p><a href="/auth/google">Tester Google Auth</a></p>';
+            <p><a href="/auth/google">Tester Google Auth</a></p>
+            <p><a href="/test-callback">Tester route callback</a></p>';
 });
 
 Route::get('/dashboard', function () {
