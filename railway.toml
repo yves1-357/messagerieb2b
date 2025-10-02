@@ -1,0 +1,13 @@
+# Configuration Railways pour MySQL
+[build]
+builder = "nixpacks"
+buildCommand = "npm run build"
+
+[deploy]
+healthcheckPath = "/"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+
+[nixpacks]
+nodeVersion = "20.19.0"
+phpVersion = "8.2"
