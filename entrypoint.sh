@@ -19,4 +19,7 @@ echo "Running migrations..."
 php artisan migrate --force
 
 echo "Starting application..."
-exec php artisan serve --host=0.0.0.0 --port=${PORT:-8000}
+# Utiliser le port par défaut 8000 ou celui défini par Railway
+DEFAULT_PORT=8000
+SERVE_PORT=${PORT:-$DEFAULT_PORT}
+exec php artisan serve --host=0.0.0.0 --port=$SERVE_PORT
