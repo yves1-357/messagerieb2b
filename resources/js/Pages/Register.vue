@@ -45,9 +45,9 @@ import { router } from '@inertiajs/vue3';
 import Swal from 'sweetalert2';
 
 // on declare
-const nom = ref('test');
-const email = ref('default@exemple.com');
-const password = ref('holaZola');
+const nom = ref('');
+const email = ref('');
+const password = ref('');
 const chargement = ref(false);
 const emit = defineEmits(['switchPage']);
 
