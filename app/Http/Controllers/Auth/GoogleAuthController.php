@@ -67,10 +67,14 @@ class GoogleAuthController extends Controller
             // Régénérer la session pour sécurité
             request()->session()->regenerate();
 
+            // Debug: vérifier que l'utilisateur est bien connecté
+            Log::info('Auth check after login: ' . (Auth::check() ? 'true' : 'false'));
+            Log::info('Authenticated user ID: ' . (Auth::id() ?? 'null'));
+
             Log::info('User logged in successfully, redirecting to chat');
 
-            // Rediriger vers la page de chat
-            return redirect('/chat');
+            // Test: redirection vers route sans middleware
+            return redirect('/auth-success');
 
         } catch (\Exception $e) {
             Log::error('Google Auth Error: ' . $e->getMessage());
