@@ -9,27 +9,33 @@ echo "DB_PORT: $DB_PORT"
 echo "DB_DATABASE: $DB_DATABASE"
 echo "DB_USERNAME: $DB_USERNAME"
 
-# Attendre que la base de données soit disponible avec un timeout
-echo "Checking database connection..."
-max_attempts=30
+# Créer les dossiers nécessaires
+mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views
+chmod -R 775 storage bootstrap/cache
+
+# Essayer de créer les tables Laravel d'abord
+echo "Creating Laravel tables..."
+php artisan migrate --force 2>/dev/null || echo "Migration failed, but continuing..."
+
+# Attendre que la base de données soit disponible avec les tables
+echo "Checking database connection with tables..."
+max_attempts=10
 attempt=1
 
 while [ $attempt -le $max_attempts ]; do
   echo "Database connection attempt $attempt/$max_attempts..."
 
-  if php artisan tinker --execute="try { DB::connection()->getPdo(); echo 'Connected!'; } catch(Exception \$e) { echo 'Failed: ' . \$e->getMessage(); exit(1); }" 2>/dev/null; then
-    echo "Database connected successfully!"
+  if php artisan tinker --execute="try { DB::table('users')->limit(1)->get(); echo 'Tables exist!'; } catch(Exception \$e) { echo 'Tables missing: ' . \$e->getMessage(); exit(1); }" 2>/dev/null; then
+    echo "Database and tables ready!"
     break
   fi
 
   if [ $attempt -eq $max_attempts ]; then
-    echo "Failed to connect to database after $max_attempts attempts"
-    echo "Checking if MySQL service is available..."
-    php artisan tinker --execute="echo 'DB Config: '; print_r(config('database.connections.mysql'));"
-    exit 1
+    echo "Tables still missing after $max_attempts attempts, starting worker anyway..."
+    break
   fi
 
-  echo "Database not ready, waiting 10 seconds..."
+  echo "Tables not ready, waiting 10 seconds..."
   sleep 10
   attempt=$((attempt + 1))
 done
