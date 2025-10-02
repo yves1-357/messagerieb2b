@@ -57,6 +57,22 @@ Route::get('/dashboard', function () {
 Route::get('/chat', function (){
     Log::info('Accessing /chat route. Auth check: ' . (Auth::check() ? 'true' : 'false'));
     Log::info('User ID: ' . (Auth::id() ?? 'null'));
+    Log::info('Manual session user: ' . session('auth_user_id', 'none'));
+
+    // Test: Vérifier la session manuelle si Laravel Auth échoue
+    if (!Auth::check() && session('auth_user_id')) {
+        Log::info('Using manual session auth');
+        $userId = session('auth_user_id');
+        $userName = session('auth_user_name');
+
+        return Inertia::render('Chat', [
+            'user' => [
+                'id' => $userId,
+                'name' => $userName
+            ],
+            'auth_method' => 'manual_session'
+        ]);
+    }
 
     if (!Auth::check()) {
         Log::warning('User not authenticated, redirecting to home');
@@ -64,9 +80,7 @@ Route::get('/chat', function (){
     }
 
     return Inertia::render('Chat');
-})->middleware(['auth'])->name('chat');
-
-// Route de test pour Google Auth (sans middleware)
+})->name('chat');// Route de test pour Google Auth (sans middleware)
 Route::get('/auth-success', function () {
     return Inertia::render('Chat');
 })->name('auth.success');
@@ -76,16 +90,21 @@ Route::get('/test-auth', function () {
     $isAuth = Auth::check();
     $user = Auth::user();
 
+    // Vérifier aussi la session manuelle
+    $manualUserId = session('auth_user_id');
+    $manualUserName = session('auth_user_name');
+
     return response()->json([
         'authenticated' => $isAuth,
         'user_id' => $user ? $user->id : null,
         'user_name' => $user ? $user->name : null,
         'session_id' => session()->getId(),
-        'message' => $isAuth ? 'Utilisateur connecté' : 'Utilisateur non connecté'
+        'manual_user_id' => $manualUserId,
+        'manual_user_name' => $manualUserName,
+        'session_driver' => config('session.driver'),
+        'message' => $isAuth ? 'Utilisateur connecté via Laravel Auth' : 'Utilisateur non connecté'
     ]);
-});
-
-// Route de diagnostic sessions
+});// Route de diagnostic sessions
 Route::get('/debug-sessions', function () {
     try {
         $sessionDriver = config('session.driver');

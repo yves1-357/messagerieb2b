@@ -72,6 +72,13 @@ class GoogleAuthController extends Controller
             Log::info('Authenticated user ID: ' . (Auth::id() ?? 'null'));
             Log::info('Session ID after login: ' . request()->session()->getId());
 
+            // Test: Sauvegarder manuellement l'auth dans la session
+            session(['auth_user_id' => $user->id]);
+            session(['auth_user_name' => $user->name]);
+            session()->save();
+
+            Log::info('Manual session saved with user: ' . $user->id);
+
             Log::info('User logged in successfully, redirecting to chat');
 
             // Pause pour s'assurer que la session est sauvegardée
