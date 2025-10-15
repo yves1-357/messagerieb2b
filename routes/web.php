@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -57,6 +60,21 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Routes pour les conversations (API-like pour notre frontend Vue)
+    Route::get('/api/conversations', [ConversationController::class, 'index']);
+    Route::post('/api/conversations', [ConversationController::class, 'store']);
+    Route::get('/api/conversations/{conversation}', [ConversationController::class, 'show']);
+    Route::put('/api/conversations/{conversation}', [ConversationController::class, 'update']);
+    Route::delete('/api/conversations/{conversation}', [ConversationController::class, 'destroy']);
+
+    // Routes pour les messages
+    Route::get('/api/conversations/{conversation}/messages', [MessageController::class, 'index']);
+    Route::post('/api/conversations/{conversation}/messages', [MessageController::class, 'store']);
+
+    // Routes pour les utilisateurs
+    Route::get('/api/users/search', [UserController::class, 'search']);
+    Route::get('/api/users', [UserController::class, 'index']);
 });
 
 // Route principale - Page d'authentification
