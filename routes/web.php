@@ -14,7 +14,7 @@ Route::get('/health', function (): JsonResponse {
     return response()->json(['status' => 'ok'], 200);
 });
 
-// Routes d'authentification traditionnelle
+// Routes d'authentification
 Route::post('/register', [RegisteredUserController::class, 'register']);
 Route::post('/login', [RegisteredUserController::class, 'login'])->name('login');
 
@@ -64,7 +64,7 @@ Route::get('/', function () {
     return Inertia::render('Authpage');
 })->name('home');
 
-// Route catch-all pour SPA - DOIT ÊTRE EN DERNIER
+// Route catch-all pour SPA
 Route::get('/{any}', function () {
     return Inertia::render('Authpage');
 })->where('any', '.*');
