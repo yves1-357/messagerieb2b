@@ -75,6 +75,11 @@ Route::middleware('auth')->group(function () {
     // Routes pour les utilisateurs
     Route::get('/api/users/search', [UserController::class, 'search']);
     Route::get('/api/users', [UserController::class, 'index']);
+
+    // Routes pour le système username
+    Route::patch('/api/user/username', [UserController::class, 'updateUsername']);
+    Route::post('/api/auth/logout', [UserController::class, 'logout']);
+    Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
 });
 
 // Route principale - Page d'authentification
