@@ -1,29 +1,463 @@
 <template>
-    <div class="min-h-screen bg-indigo-900 text-white p-8">
-      <header class="flex items-center p-6">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 52 52"
-        class="w-10 h-10 mr-3"
-        fill="#4927F5"
-        stroke="#4927F5"
-      >
-        <path d="M26.1,3.3C12.5,3.3,1.5,13.4,1.5,25.8c0,3.9,1.1,7.6,3,10.9c0.3,0.5,0.4,1.1,0.2,1.7l-3.2,8.7
-          c-0.3,0.8,0.5,1.5,1.3,1.3l8.8-3.4c0.5-0.2,1.1-0.1,1.7,0.2c3.7,2.1,8.1,3.3,12.9,3.3c13.5-0.1,24.5-10.1,24.5-22.6
-          C50.7,13.4,39.7,3.3,26.1,3.3z M14.7,25c0-0.5,0.4-1,1-1h15.9c0.5,0,1,0.4,1,1V27c0,0.5-0.4,1-1,1H15.6c-0.5,0-1-0.4-1-1V25z
-          M37.6,34.6c0,0.5-0.4,1-1,1h-21c-0.5,0-1-0.4-1-1v-1.9c0-0.5,0.4-1,1-1h21c0.5,0,1,0.4,1,1V34.6z
-          M37.6,19.3c0,0.5-0.4,1-1,1h-21
-          c-0.5,0-1-0.4-1-1v-1.9c0-0.5,0.4-1,1-1h21c0.5,0,1,0.4,1,1V19.3z"/>
-      </svg>
-      <h1 class="text-2xl font-bold text-white">QuickChat</h1>
+  <!-- Layout Telegram-like avec 3 colonnes - DESKTOP FIXED HEIGHT -->
+  <div class="h-screen bg-gray-900 text-white flex overflow-hidden max-h-screen">
 
-    </header>
+    <!-- COLONNE GAUCHE - Profil + Sidebar -->
+    <div class="w-80 bg-gray-800 flex flex-col border-r border-gray-700 h-full">
+      <!-- Composant Profil (header) avec conversations pour badge -->
+      <Profil
+        :conversations="conversations"
+        @search="handleSearch"
+      />
 
-        <div class="bg-indigo-800 p-6 rounded-lg shadow-lg">
-            <h2 class="text-xl mb-4">Messagerie Chat</h2>
-            <div class="p-4 bg-indigo-700 rounded">
-                Bienvenue dans la messagerie chat !
-            </div>
-        </div>
+      <!-- Composant Sidebar (conversations) -->
+      <Sidebar
+        :conversations="conversations"
+        :selected-conversation-id="selectedConversation?.id"
+        :search-query="searchQuery"
+        @select-conversation="selectConversation"
+        @new-group="handleNewGroup"
+        @new-message="handleNewMessage"
+      />
     </div>
+
+    <!-- COLONNE CENTRALE - Zone de chat -->
+    <div class="flex-1 flex flex-col h-full min-h-0">
+      <div v-if="selectedConversation" class="flex flex-col h-full">
+        <!-- En-tête de la conversation - HAUTEUR FIXE -->
+        <div class="bg-gray-800 p-4 border-b border-gray-700 flex-shrink-0">
+          <div class="flex items-center justify-between">
+            <div
+              @click="showUserInfo = true"
+              class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 rounded-lg p-2 -m-2 transition-colors"
+            >
+              <div
+                class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                :style="{ backgroundColor: selectedConversation.avatarColor }"
+              >
+                {{ getInitials(selectedConversation.name) }}
+              </div>
+              <div>
+                <h2 class="font-semibold text-white">{{ selectedConversation.name }}</h2>
+                <p class="text-sm text-gray-400">
+                  {{ selectedConversation.isOnline ? 'en ligne' : getLastSeenText(selectedConversation.lastSeen) }}
+                </p>
+              </div>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <button class="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+              </button>
+              <button class="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                </svg>
+              </button>
+              <button class="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zone des messages - FLEX GROW AVEC LIMITES -->
+        <div class="flex-1 overflow-y-auto bg-gray-900 relative min-h-0 scrollbar-hide" ref="messagesContainer">
+          <div v-if="currentMessages.length === 0" class="flex items-center justify-center h-full absolute inset-0">
+            <div class="text-center text-gray-400">
+              <!-- Sticker cute avec pattern background comme Telegram -->
+              <div class="mb-6 relative">
+                <div class="w-32 h-32 mx-auto mb-4 text-8xl select-none">
+                  🐾
+                </div>
+              </div>
+              <h3 class="text-lg font-medium mb-2 text-gray-300">No messages here yet...</h3>
+              <p class="text-sm text-gray-500">Send a message or tap the greeting below.</p>
+            </div>
+          </div>
+
+          <!-- Messages - CENTRÉ COMME TELEGRAM -->
+          <div v-else class="flex flex-col items-center w-full">
+            <div class="w-full max-w-4xl px-4 py-4 space-y-4">
+              <!-- Indicateur de date -->
+              <div class="text-center">
+                <span class="bg-gray-700 text-gray-300 text-xs px-3 py-1 rounded-full">
+                  Aujourd'hui
+                </span>
+              </div>
+
+              <div v-for="message in currentMessages" :key="message.id" class="flex" :class="{ 'justify-end': message.isOwn, 'justify-start': !message.isOwn }">
+
+                <!-- Messages des autres -->
+                <div v-if="!message.isOwn" class="flex items-end space-x-2 max-w-md">
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                    :style="{ backgroundColor: selectedConversation.avatarColor }"
+                  >
+                    {{ getInitials(selectedConversation.name) }}
+                  </div>
+                  <div class="bg-gray-700 text-white rounded-2xl rounded-bl-sm px-4 py-2 shadow-lg">
+                    <p class="text-sm">{{ message.content }}</p>
+                    <span class="text-xs text-gray-400 mt-1 block">{{ formatMessageTime(message.timestamp) }}</span>
+                  </div>
+                </div>
+
+                <!-- Mes messages -->
+                <div v-else class="flex items-end space-x-2 max-w-md">
+                  <div class="bg-blue-600 text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-lg">
+                    <p class="text-sm">{{ message.content }}</p>
+                    <div class="flex items-center justify-end space-x-1 mt-1">
+                      <span class="text-xs text-blue-200">{{ formatMessageTime(message.timestamp) }}</span>
+                      <svg v-if="message.status === 'sent'" class="w-3 h-3 text-blue-200" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                      </svg>
+                      <svg v-else-if="message.status === 'read'" class="w-3 h-3 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Zone de saisie - HAUTEUR FIXE EN BAS ET CENTRÉE -->
+        <div class=" p-3 flex-shrink-0 flex justify-center">
+          <div class="w-full max-w-4xl flex items-center space-x-2">
+            <!-- Bouton emoji -->
+            <button class="p-2 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-700">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </button>
+
+            <!-- Zone de texte avec style Telegram -->
+            <div class="flex-1 relative">
+              <textarea
+                v-model="newMessage"
+                @keydown.enter.exact.prevent="sendMessage"
+                @keydown.enter.shift.exact="handleShiftEnter"
+                @input="autoResize"
+                placeholder="Message"
+                rows="1"
+                class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-2xl pl-4 pr-12 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+                style="min-height: 48px; max-height: 120px; line-height: 1.4;"
+                ref="messageInput"
+              ></textarea>
+
+              <!-- Bouton attach dans le textarea -->
+              <button class="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-400 hover:text-white transition-colors rounded-full hover:bg-gray-600">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Bouton d'envoi comme Telegram -->
+            <button
+              @click="sendMessage"
+              :disabled="!newMessage.trim()"
+              class="w-12 h-12 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-full transition-colors flex items-center justify-center"
+            >
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- État quand aucune conversation sélectionnée -->
+      <div v-else class="flex-1 flex flex-col">
+        <!-- Zone vide -->
+        <div class="flex-1 flex items-center justify-center bg-gray-900">
+          <div class="text-center text-gray-400">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+            </svg>
+            <h3 class="text-lg font-medium mb-2">Sélectionnez une conversation</h3>
+            <p class="text-sm">Choisissez une conversation pour commencer à discuter</p>
+          </div>
+        </div>
+
+        <!-- Barre de saisie CENTRÉE ET TOUJOURS présente en bas -->
+        <div class="bg-gray-800 p-3 border-t border-gray-700 flex justify-center">
+          <div class="w-full max-w-4xl flex items-center space-x-2">
+            <!-- Bouton emoji -->
+            <button disabled class="p-2 text-gray-600 rounded-full cursor-not-allowed">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </button>
+
+            <!-- Zone de texte désactivée -->
+            <div class="flex-1 relative">
+              <textarea
+                disabled
+                placeholder="Sélectionnez une conversation pour envoyer un message"
+                rows="1"
+                class="w-full bg-gray-700 text-gray-500 placeholder-gray-500 rounded-2xl pl-4 pr-12 py-3 resize-none cursor-not-allowed text-sm"
+                style="min-height: 48px; line-height: 1.4;"
+              ></textarea>
+
+              <!-- Bouton attach désactivé -->
+              <button disabled class="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 text-gray-600 rounded-full cursor-not-allowed">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Bouton d'envoi désactivé -->
+            <button
+              disabled
+              class="w-12 h-12 bg-gray-600 cursor-not-allowed rounded-full flex items-center justify-center"
+            >
+              <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLONNE DROITE - UserInfo (conditionnel) -->
+    <UserInfo
+      v-if="showUserInfo && selectedConversation"
+      :user="selectedConversationUser"
+      @close="showUserInfo = false"
+      class="h-full"
+    />
+  </div>
 </template>
+
+<script setup>
+import { ref, computed, nextTick, onMounted } from 'vue';
+import Profil from './Profil.vue';
+import Sidebar from './Sidebar.vue';
+import UserInfo from './UserInfo.vue';
+
+// État de l'application
+const searchQuery = ref('');
+const selectedConversation = ref(null);
+const showUserInfo = ref(false);
+const newMessage = ref('');
+const messagesContainer = ref(null);
+const messageInput = ref(null);
+
+// Données fictives pour les conversations - synchronisées avec Sidebar.vue
+const conversations = ref([
+  {
+    id: 1,
+    name: 'Carmen Goina',
+    avatarColor: '#8B5CF6',
+    isOnline: true,
+    lastMessage: 'hey question par curiosité tes sur vuemo',
+    lastMessageTime: new Date(Date.now() - 5 * 60000), // 5 minutes ago
+    lastMessageFromMe: false,
+    unreadCount: 1
+  },
+  {
+    id: 2,
+    name: 'J, Marian, Celia and Fi Fou',
+    avatarColor: '#10B981',
+    isOnline: false,
+    lastMessage: 'You: J created the group «J, Marian, Celia a...',
+    lastMessageTime: new Date(Date.now() - 10 * 60000), // 10 minutes ago
+    lastMessageFromMe: true,
+    unreadCount: 2
+  },
+  {
+    id: 3,
+    name: 'Winner 💎💎💎',
+    avatarColor: '#F59E0B',
+    isOnline: false,
+    lastMessage: '📷 Photo',
+    lastMessageTime: new Date(Date.now() - 24 * 60 * 60000), // 1 day ago
+    lastMessageFromMe: false,
+    unreadCount: 0
+  },
+  {
+    id: 4,
+    name: 'August MavisVista',
+    avatarColor: '#EF4444',
+    isOnline: true,
+    lastMessage: 'Hallo, goedemorgen. Kampioen.',
+    lastMessageTime: new Date(Date.now() - 24 * 60 * 60000), // 1 day ago
+    lastMessageFromMe: false,
+    unreadCount: 0
+  },
+  {
+    id: 5,
+    name: 'Aurore Manager 🌸',
+    avatarColor: '#EC4899',
+    isOnline: false,
+    lastMessage: '😊',
+    lastMessageTime: new Date(Date.now() - 2 * 24 * 60 * 60000), // 2 days ago
+    lastMessageFromMe: false,
+    unreadCount: 0
+  }
+]);
+
+// Messages fictifs pour les conversations
+const allMessages = ref({
+  1: [
+    {
+      id: 1,
+      content: 'hey question par curiosité tes sur vuemo',
+      timestamp: new Date(Date.now() - 5 * 60000),
+      isOwn: false,
+      status: 'read'
+    }
+  ]
+});
+
+// Computed
+const currentMessages = computed(() => {
+  if (!selectedConversation.value) return [];
+  return allMessages.value[selectedConversation.value.id] || [];
+});
+
+const selectedConversationUser = computed(() => {
+  if (!selectedConversation.value) return null;
+
+  return {
+    ...selectedConversation.value,
+    email: 'carmen.goina@example.com',
+    phone: '+32 486 47 23 54',
+    username: 'Loredana667',
+    lastSeen: new Date(Date.now() - 6 * 60000) // 6 minutes ago
+  };
+});
+
+// Méthodes
+const getInitials = (name) => {
+  if (!name) return 'U';
+  return name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .toUpperCase()
+    .substring(0, 2);
+};
+
+const formatMessageTime = (timestamp) => {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+};
+
+const getLastSeenText = (lastSeen) => {
+  if (!lastSeen) return 'vu pour la dernière fois il y a longtemps';
+
+  const now = new Date();
+  const lastSeenDate = new Date(lastSeen);
+  const diff = now - lastSeenDate;
+
+  const minutes = Math.floor(diff / (1000 * 60));
+  if (minutes < 1) return 'vu à l\'instant';
+  if (minutes < 60) return `vu il y a ${minutes} minute${minutes > 1 ? 's' : ''}`;
+
+  return 'vu pour la dernière fois il y a 6 minutes';
+};
+
+const selectConversation = (conversation) => {
+  selectedConversation.value = conversation;
+  showUserInfo.value = false; // Fermer le panel utilisateur
+  scrollToBottom();
+};
+
+const handleSearch = (query) => {
+  searchQuery.value = query;
+};
+
+const handleNewGroup = () => {
+  console.log('Créer un nouveau groupe');
+  // TODO: Implémenter la création de groupe
+};
+
+const handleNewMessage = () => {
+  console.log('Nouveau message');
+  // TODO: Implémenter nouveau message
+};
+
+const sendMessage = () => {
+  if (!newMessage.value.trim() || !selectedConversation.value) return;
+
+  const message = {
+    id: Date.now(),
+    content: newMessage.value.trim(),
+    timestamp: new Date(),
+    isOwn: true,
+    status: 'sent'
+  };
+
+  if (!allMessages.value[selectedConversation.value.id]) {
+    allMessages.value[selectedConversation.value.id] = [];
+  }
+
+  allMessages.value[selectedConversation.value.id].push(message);
+  selectedConversation.value.lastMessage = message.content;
+  selectedConversation.value.lastMessageTime = message.timestamp;
+  selectedConversation.value.lastMessageFromMe = true;
+
+  newMessage.value = '';
+  resetTextareaHeight();
+  scrollToBottom();
+};
+
+const handleShiftEnter = (event) => {
+  // Permettre le saut de ligne avec Shift+Enter
+  const target = event.target;
+  nextTick(() => {
+    autoResize();
+  });
+};
+
+const autoResize = () => {
+  const textarea = messageInput.value;
+  if (textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+  }
+};
+
+const resetTextareaHeight = () => {
+  nextTick(() => {
+    if (messageInput.value) {
+      messageInput.value.style.height = '48px';
+    }
+  });
+};
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
+    }
+  });
+};
+
+// Lifecycle
+onMounted(() => {
+  // Pas de conversation sélectionnée par défaut pour correspondre à Telegram
+});
+</script>
+
+<style scoped>
+/* Masquer la scrollbar pour un look professionnel comme Telegram */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+</style>
