@@ -13,7 +13,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
+     *
      *
      * @var list<string>
      */
@@ -23,15 +23,12 @@ class User extends Authenticatable
         'password',
         'google_id',
         'username',
-        'avatar',
-        'bio',
-        'is_online',
-        'last_seen',
-        'notifications_enabled',
+        'status',
+        'last_seen_at',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * champs cachées.
      *
      * @var list<string>
      */
@@ -40,8 +37,8 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
+        /**
+     * convertit vers BD.
      *
      * @return array<string, string>
      */
@@ -50,54 +47,71 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
-            'last_seen' => 'datetime',
-            'is_online' => 'boolean',
-            'notifications_enabled' => 'boolean',
+            'last_seen_at' => 'datetime',
         ];
     }
 
     /**
-     * Conversations where the user is a participant
+     * Determine if user est online
      */
-    public function conversations()
+    public function isOnline(): bool
     {
-        return $this->belongsToMany(Conversation::class, 'conversation_user')
-                    ->withPivot('role', 'joined_at', 'left_at', 'notifications_enabled')
-                    ->withTimestamps();
+        return $this->status === 'online';
     }
 
     /**
-     * Messages sent by the user
+     *  status detaillée with time info
      */
-    public function messages()
+    public function getStatusWithTime(): array
     {
-        return $this->hasMany(Message::class);
-    }
+        if ($this->status === 'online') {
+            return [
+                'status' => 'online',
+                'text' => 'en ligne',
+                'color' => 'green'
+            ];
+        }
 
-    /**
-     * Conversations created by the user
-     */
-    public function createdConversations()
-    {
-        return $this->hasMany(Conversation::class, 'created_by');
-    }
+        if (!$this->last_seen_at) {
+            return [
+                'status' => 'offline',
+                'text' => 'hors ligne',
+                'color' => 'gray'
+            ];
+        }
 
-    /**
-     * Get user's full avatar URL
-     */
-    public function getAvatarUrlAttribute()
-    {
-        return $this->avatar ? asset('storage/' . $this->avatar) : null;
-    }
+        $lastSeen = is_string($this->last_seen_at) ?
+            \Carbon\Carbon::parse($this->last_seen_at) :
+            $this->last_seen_at;
 
-    /**
-     * Scope to search users by username or name
-     */
-    public function scopeSearch($query, $search)
-    {
-        return $query->where(function($q) use ($search) {
-            $q->where('username', 'like', "%{$search}%")
-              ->orWhere('name', 'like', "%{$search}%");
-        });
+        $minutesAgo = $lastSeen->diffInMinutes(now());
+
+        if ($minutesAgo < 1) {
+            return [
+                'status' => 'recently',
+                'text' => 'à l\'instant',
+                'color' => 'yellow'
+            ];
+        } elseif ($minutesAgo < 60) {
+            return [
+                'status' => 'recently',
+                'text' => "il y a {$minutesAgo} min",
+                'color' => 'yellow'
+            ];
+        } elseif ($minutesAgo < 1440) { // 24 hours
+            $hoursAgo = round($minutesAgo / 60);
+            return [
+                'status' => 'offline',
+                'text' => "il y a {$hoursAgo}h",
+                'color' => 'gray'
+            ];
+        } else {
+            $daysAgo = round($minutesAgo / 1440);
+            return [
+                'status' => 'offline',
+                'text' => "il y a {$daysAgo}j",
+                'color' => 'gray'
+            ];
+        }
     }
 }
