@@ -1,5 +1,5 @@
 <template>
-  <!-- Layout Telegram-like avec 3 colonnes - DESKTOP FIXED HEIGHT -->
+  <!-- Layout avec 3 colonnes - DESKTOP FIXED HEIGHT -->
   <div class="h-screen bg-gray-900 text-white flex overflow-hidden max-h-screen">
 
     <!-- COLONNE GAUCHE - Profil + Sidebar -->
@@ -8,6 +8,10 @@
       <Profil
         :conversations="conversations"
         @search="handleSearch"
+        @show-user-info="handleShowUserInfo"
+        @user-updated="handleUserUpdated"
+        @theme-changed="handleThemeChanged"
+        @start-conversation="handleStartConversation"
       />
 
       <!-- Composant Sidebar (conversations) -->
@@ -28,7 +32,7 @@
         <div class="bg-gray-800 p-4 border-b border-gray-700 flex-shrink-0">
           <div class="flex items-center justify-between">
             <div
-              @click="showUserInfo = true"
+              @click="showConversationUserInfo"
               class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 rounded-lg p-2 -m-2 transition-colors"
             >
               <div
@@ -65,22 +69,22 @@
           </div>
         </div>
 
-        <!-- Zone des messages - FLEX GROW AVEC LIMITES -->
+        <!-- Zone des messages - -->
         <div class="flex-1 overflow-y-auto bg-gray-900 relative min-h-0 scrollbar-hide" ref="messagesContainer">
           <div v-if="currentMessages.length === 0" class="flex items-center justify-center h-full absolute inset-0">
             <div class="text-center text-gray-400">
-              <!-- Sticker cute avec pattern background comme Telegram -->
+              <!-- Sticker cute avec pattern background -->
               <div class="mb-6 relative">
                 <div class="w-32 h-32 mx-auto mb-4 text-8xl select-none">
                   🐾
                 </div>
               </div>
               <h3 class="text-lg font-medium mb-2 text-gray-300">No messages here yet...</h3>
-              <p class="text-sm text-gray-500">Send a message or tap the greeting below.</p>
+              <p class="text-sm text-gray-500">Send a message below.</p>
             </div>
           </div>
 
-          <!-- Messages - CENTRÉ COMME TELEGRAM -->
+          <!-- Messages - CENTRÉ -->
           <div v-else class="flex flex-col items-center w-full">
             <div class="w-full max-w-4xl px-4 py-4 space-y-4">
               <!-- Indicateur de date -->
@@ -136,7 +140,7 @@
               </svg>
             </button>
 
-            <!-- Zone de texte avec style Telegram -->
+            <!-- Zone de texte avec style -->
             <div class="flex-1 relative">
               <textarea
                 v-model="newMessage"
@@ -158,7 +162,7 @@
               </button>
             </div>
 
-            <!-- Bouton d'envoi comme Telegram -->
+            <!-- Bouton d'envoi-->
             <button
               @click="sendMessage"
               :disabled="!newMessage.trim()"
@@ -229,9 +233,10 @@
 
     <!-- COLONNE DROITE - UserInfo (conditionnel) -->
     <UserInfo
-      v-if="showUserInfo && selectedConversation"
-      :user="selectedConversationUser"
+      v-if="showUserInfo && (selectedConversation || selectedUser)"
+      :user="selectedUser || selectedConversationUser"
       @close="showUserInfo = false"
+      @start-conversation="handleStartConversation"
       class="h-full"
     />
   </div>
@@ -239,6 +244,7 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 import Profil from './Profil.vue';
 import Sidebar from './Sidebar.vue';
 import UserInfo from './UserInfo.vue';
@@ -246,6 +252,7 @@ import UserInfo from './UserInfo.vue';
 // État de l'application
 const searchQuery = ref('');
 const selectedConversation = ref(null);
+const selectedUser = ref(null);
 const showUserInfo = ref(false);
 const newMessage = ref('');
 const messagesContainer = ref(null);
@@ -373,18 +380,121 @@ const selectConversation = (conversation) => {
   scrollToBottom();
 };
 
+const showConversationUserInfo = () => {
+  if (!selectedConversation.value) return;
+
+  // Créer un objet utilisateur basé sur la conversation
+  const conversationUser = {
+    id: selectedConversation.value.id,
+    name: selectedConversation.value.name,
+    username: selectedConversation.value.username || null,
+    email: selectedConversation.value.email || null,
+    avatarColor: selectedConversation.value.avatarColor,
+    status: selectedConversation.value.isOnline ? 'online' : 'offline',
+    last_seen_at: selectedConversation.value.lastSeen || null,
+    created_at: selectedConversation.value.created_at || null
+  };
+
+  // Si la conversation a des utilisateurs spécifiques, utiliser le premier qui n'est pas l'utilisateur actuel
+  if (selectedConversation.value.users && selectedConversation.value.users.length > 0) {
+    const currentUserId = usePage().props.auth?.user?.id;
+    const otherUser = selectedConversation.value.users.find(user => user.id !== currentUserId);
+    if (otherUser) {
+      selectedUser.value = otherUser;
+    } else {
+      selectedUser.value = conversationUser;
+    }
+  } else {
+    selectedUser.value = conversationUser;
+  }
+
+  showUserInfo.value = true;
+};
+
 const handleSearch = (query) => {
   searchQuery.value = query;
 };
 
+const handleShowUserInfo = (data) => {
+  if (data && data.user) {
+    // Ouvrir le UserInfo panel avec l'utilisateur spécifié
+    selectedUser.value = data.user;
+    showUserInfo.value = true;
+  }
+};
+
+const handleUserUpdated = (updatedUser) => {
+  // Mettre à jour l'utilisateur actuel dans le store global
+  if (window.Laravel && window.Laravel.user) {
+    window.Laravel.user = updatedUser;
+  }
+
+  // Mettre à jour les props Inertia pour la réactivité globale
+  const { props } = usePage();
+  if (props.auth && props.auth.user) {
+    props.auth.user = updatedUser;
+  }
+
+  // Si le UserInfo panel affiche cet utilisateur, le mettre à jour
+  if (selectedUser.value && selectedUser.value.id === updatedUser.id) {
+    selectedUser.value = updatedUser;
+  }
+};
+
+const handleThemeChanged = (theme) => {
+  // Appliquer le thème au document
+  const html = document.documentElement;
+  if (theme === 'dark') {
+    html.classList.add('dark');
+  } else {
+    html.classList.remove('dark');
+  }
+
+  // Sauvegarder dans localStorage
+  localStorage.setItem('theme', theme);
+};
+
+const handleStartConversation = (user) => {
+  // Chercher si une conversation avec cet utilisateur existe déjà
+  let conversation = conversations.value.find(conv =>
+    conv.name === user.name ||
+    (conv.users && conv.users.some(u => u.id === user.id))
+  );
+
+  // Si aucune conversation n'existe, créer une nouvelle
+  if (!conversation) {
+    conversation = {
+      id: Date.now(), // ID temporaire
+      name: user.name,
+      avatarColor: user.avatarColor || '#8B5CF6',
+      lastMessage: '',
+      lastMessageTime: 'now',
+      isOnline: true,
+      unreadCount: 0,
+      messages: [],
+      users: [user] // Ajouter l'utilisateur à la conversation
+    };
+
+    // Ajouter la nouvelle conversation à la liste
+    conversations.value.unshift(conversation);
+  }
+
+  // Sélectionner la conversation
+  selectConversation(conversation);
+
+  // Fermer le UserInfo panel s'il est ouvert
+  showUserInfo.value = false;
+  selectedUser.value = null;
+};
+
 const handleNewGroup = () => {
   console.log('Créer un nouveau groupe');
-  // TODO: Implémenter la création de groupe
+  // A faire apres : Implémenter la création de groupe
 };
 
 const handleNewMessage = () => {
   console.log('Nouveau message');
-  // TODO: Implémenter nouveau message
+  // A faire apres : Implémenter nouveau message
 };
 
 const sendMessage = () => {
@@ -446,12 +556,23 @@ const scrollToBottom = () => {
 
 // Lifecycle
 onMounted(() => {
-  // Pas de conversation sélectionnée par défaut pour correspondre à Telegram
+  // Pas de conversation sélectionnée par défaut
+
+  // Initialiser le thème depuis localStorage
+  const savedTheme = localStorage.getItem('theme');
+  if (savedTheme) {
+    const html = document.documentElement;
+    if (savedTheme === 'dark') {
+      html.classList.add('dark');
+    } else {
+      html.classList.remove('dark');
+    }
+  }
 });
 </script>
 
 <style scoped>
-/* Masquer la scrollbar pour un look professionnel comme Telegram */
+/* Masquer la scrollbar pour un look professionnel */
 .scrollbar-hide {
   -ms-overflow-style: none;  /* Internet Explorer 10+ */
   scrollbar-width: none;  /* Firefox */

@@ -31,16 +31,21 @@
       <div class="flex items-center justify-center space-x-2 mb-4">
         <div
           class="w-2 h-2 rounded-full"
-          :class="user.isOnline ? 'bg-green-500' : 'bg-gray-500'"
+          :class="{
+            'bg-green-500': userStatus.color === 'green',
+            'bg-yellow-500': userStatus.color === 'yellow',
+            'bg-gray-500': userStatus.color === 'gray'
+          }"
         ></div>
-        <span class="text-sm text-gray-400">
-          {{ user.isOnline ? 'en ligne' : getLastSeenText(user.lastSeen) }}
-        </span>
+        <span class="text-sm text-gray-400">{{ userStatus.text }}</span>
       </div>
 
       <!-- Actions rapides -->
-      <div class="flex space-x-3">
-        <button class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2">
+      <div v-if="!isOwnProfile" class="flex space-x-3">
+        <button
+          @click="startConversation"
+          class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+        >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
           </svg>
@@ -53,6 +58,11 @@
           </svg>
         </button>
       </div>
+
+      <!-- Message informatif pour son propre profil -->
+      <div v-else class="bg-gray-700 rounded-lg p-3">
+        <p class="text-sm text-gray-300 text-center">Profil</p>
+      </div>
     </div>
 
     <!-- Informations détaillées -->
@@ -60,16 +70,7 @@
       <h4 class="text-sm font-medium text-gray-300 mb-3">Informations</h4>
 
       <div class="space-y-3">
-        <!-- Téléphone -->
-        <div class="flex items-center space-x-3">
-          <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-          </svg>
-          <div class="flex-1">
-            <p class="text-xs text-gray-400">Téléphone</p>
-            <p class="text-white">{{ user.phone || '+32 486 47 23 54' }}</p>
-          </div>
-        </div>
+
 
         <!-- Email -->
         <div class="flex items-center space-x-3">
@@ -194,7 +195,8 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { usePage } from '@inertiajs/vue3';
 
 // Props
 const props = defineProps({
@@ -205,11 +207,54 @@ const props = defineProps({
 });
 
 // Emits
-defineEmits(['close']);
+const emit = defineEmits(['close', 'start-conversation']);
 
 // État du composant
 const notificationsEnabled = ref(true);
 const activeTab = ref('media');
+
+// Méthodes
+const startConversation = () => {
+  if (props.user) {
+    emit('start-conversation', props.user);
+  }
+};
+
+// Vérifier si c'est le propre profil de l'utilisateur
+const isOwnProfile = computed(() => {
+  const { props: pageProps } = usePage();
+  const currentUser = pageProps.auth?.user;
+  return currentUser && props.user && currentUser.id === props.user.id;
+});
+
+// Computed pour le statut utilisateur
+const userStatus = computed(() => {
+  if (!props.user) return { status: 'offline', text: 'hors ligne', color: 'gray' };
+
+  if (props.user.status === 'online') {
+    return { status: 'online', text: 'en ligne', color: 'green' };
+  }
+
+  if (!props.user.last_seen_at) {
+    return { status: 'offline', text: 'hors ligne', color: 'gray' };
+  }
+
+  const lastSeen = new Date(props.user.last_seen_at);
+  const now = new Date();
+  const diffInMinutes = Math.floor((now - lastSeen) / (1000 * 60));
+
+  if (diffInMinutes < 1) {
+    return { status: 'recently', text: 'à l\'instant', color: 'yellow' };
+  } else if (diffInMinutes < 60) {
+    return { status: 'recently', text: `il y a ${diffInMinutes} min`, color: 'yellow' };
+  } else if (diffInMinutes < 1440) { // 24 hours
+    const hours = Math.floor(diffInMinutes / 60);
+    return { status: 'offline', text: `il y a ${hours}h`, color: 'gray' };
+  } else {
+    const days = Math.floor(diffInMinutes / 1440);
+    return { status: 'offline', text: `il y a ${days}j`, color: 'gray' };
+  }
+});
 
 // Onglets
 const tabs = ref([
