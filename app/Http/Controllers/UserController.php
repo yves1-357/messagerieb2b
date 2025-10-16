@@ -147,4 +147,99 @@ class UserController extends Controller
             'message' => 'Compte supprimé avec succès.'
         ]);
     }
+
+    /**
+     * Obtenir les utilisateurs disponibles (pas encore dans les conversations de l'utilisateur actuel)
+     */
+    public function getAvailableUsers(Request $request)
+    {
+        $currentUser = Auth::user();
+
+        if (!$currentUser) {
+            return response()->json([
+                'error' => 'User not authenticated',
+                'users' => [],
+                'pagination' => [
+                    'current_page' => 1,
+                    'per_page' => 20,
+                    'total' => 0,
+                    'last_page' => 1,
+                    'has_next_page' => false,
+                ]
+            ], 401);
+        }
+
+        $search = $request->input('search', '');
+        $page = $request->input('page', 1);
+        $perPage = 20;
+
+        // Obtenir les IDs des utilisateurs avec qui l'utilisateur actuel a déjà des conversations
+        $existingConversationUserIds = $currentUser->conversations()
+            ->with('users')
+            ->get()
+            ->flatMap(function ($conversation) use ($currentUser) {
+                return $conversation->users->where('id', '!=', $currentUser->id)->pluck('id');
+            })
+            ->unique()
+            ->values()
+            ->toArray();
+
+        // Requête pour tous les utilisateurs (sauf l'utilisateur actuel)
+        $query = User::select('id', 'name', 'username', 'email', 'status', 'last_seen_at', 'created_at')
+            ->where('id', '!=', $currentUser->id);
+
+        // Filtrage par recherche
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        // Pagination et tri alphabétique
+        $users = $query->orderBy('name', 'asc')
+            ->offset(($page - 1) * $perPage)
+            ->limit($perPage)
+            ->get()
+            ->map(function ($user) use ($existingConversationUserIds) {
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'username' => $user->username,
+                    'email' => $user->email,
+                    'status' => $user->status,
+                    'last_seen_at' => $user->last_seen_at,
+                    'avatar_color' => $user->avatar_color ?? '#8B5CF6',
+                    'is_online' => $user->isOnline(),
+                    'status_info' => $user->getStatusWithTime(),
+                    'has_conversation' => in_array($user->id, $existingConversationUserIds),
+                ];
+            });
+
+        // Compter le total pour la pagination
+        $totalCount = User::where('id', '!=', $currentUser->id)->count();
+        if ($search) {
+            $totalCount = User::where('id', '!=', $currentUser->id)
+                ->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('username', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%");
+                })
+                ->count();
+        }
+
+        $lastPage = ceil($totalCount / $perPage);
+
+        return response()->json([
+            'users' => $users,
+            'pagination' => [
+                'current_page' => $page,
+                'per_page' => $perPage,
+                'total' => $totalCount,
+                'last_page' => $lastPage,
+                'has_next_page' => $page < $lastPage,
+            ]
+        ]);
+    }
 }
