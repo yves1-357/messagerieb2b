@@ -114,4 +114,30 @@ class User extends Authenticatable
             ];
         }
     }
+
+    /**
+     * Conversations où cet utilisateur participe
+     */
+    public function conversations()
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_user')
+                    ->withTimestamps()
+                    ->withPivot('joined_at', 'left_at');
+    }
+
+    /**
+     * Messages envoyés par cet utilisateur
+     */
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    /**
+     * Conversations créées par cet utilisateur
+     */
+    public function createdConversations()
+    {
+        return $this->hasMany(Conversation::class, 'created_by');
+    }
 }

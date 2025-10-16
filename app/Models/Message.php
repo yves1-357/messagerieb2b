@@ -3,97 +3,53 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Message extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'conversation_id',
         'user_id',
         'content',
-        'type',
-        'read_at',
-        'reply_to',
+        'type', // 'text', 'image', 'file', etc.
+        'read_at'
     ];
 
     protected $casts = [
         'read_at' => 'datetime',
-        'type' => 'string',
     ];
 
     /**
-     * The conversation this message belongs to
+     * Conversation à laquelle appartient ce message
      */
-    public function conversation(): BelongsTo
+    public function conversation()
     {
         return $this->belongsTo(Conversation::class);
     }
 
     /**
-     * The user who sent this message
+     * Utilisateur qui a envoyé ce message
      */
-    public function user(): BelongsTo
+    public function user()
     {
         return $this->belongsTo(User::class);
     }
 
     /**
-     * The message this is replying to (if any)
+     * Marquer le message comme lu
      */
-    public function replyTo(): BelongsTo
+    public function markAsRead()
     {
-        return $this->belongsTo(Message::class, 'reply_to');
+        $this->update(['read_at' => now()]);
     }
 
     /**
-     * Messages that are replying to this message
+     * Scope pour les messages non lus
      */
-    public function replies(): HasMany
+    public function scopeUnread($query)
     {
-        return $this->hasMany(Message::class, 'reply_to');
-    }
-
-    /**
-     * Check if message has been read
-     */
-    public function isRead(): bool
-    {
-        return $this->read_at !== null;
-    }
-
-    /**
-     * Mark message as read
-     */
-    public function markAsRead(): void
-    {
-        if (!$this->isRead()) {
-            $this->update(['read_at' => now()]);
-        }
-    }
-
-    /**
-     * Check if message is a reply
-     */
-    public function isReply(): bool
-    {
-        return $this->reply_to !== null;
-    }
-
-    /**
-     * Get formatted message content based on type
-     */
-    public function getFormattedContentAttribute(): string
-    {
-        switch ($this->type) {
-            case 'image':
-                return '📷 Image';
-            case 'file':
-                return '📎 Fichier';
-            case 'voice':
-                return '🎤 Message vocal';
-            default:
-                return $this->content;
-        }
+        return $query->whereNull('read_at');
     }
 }

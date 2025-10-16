@@ -3,93 +3,75 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Conversation extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'name',
-        'description',
-        'type',
+        'type', // 'private' ou 'group'
         'created_by',
-        'avatar',
+        'last_message_at'
     ];
 
     protected $casts = [
-        'type' => 'string',
+        'last_message_at' => 'datetime',
     ];
 
     /**
      * Users qui participent à cette conversation
      */
-    public function users(): BelongsToMany
+    public function users()
     {
         return $this->belongsToMany(User::class, 'conversation_user')
-                    ->withPivot('role', 'joined_at', 'left_at', 'notifications_enabled')
-                    ->withTimestamps();
+                    ->withTimestamps()
+                    ->withPivot('joined_at', 'left_at');
     }
 
     /**
-     * Messages dans conversation
+     * Messages de cette conversation
      */
-    public function messages(): HasMany
+    public function messages()
     {
-        return $this->hasMany(Message::class);
+        return $this->hasMany(Message::class)->orderBy('created_at', 'desc');
     }
 
     /**
-     * User qui a créé cette conversation
+     * Dernier message de la conversation
      */
-    public function creator(): BelongsTo
+    public function lastMessage()
+    {
+        return $this->hasOne(Message::class)->latestOfMany();
+    }
+
+    /**
+     * Créateur de la conversation
+     */
+    public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
     /**
-     * Get the latest message in this conversation
+     * Scope pour les conversations d'un utilisateur
      */
-    public function latestMessage()
+    public function scopeForUser($query, $userId)
     {
-        return $this->hasOne(Message::class)->latest();
+        return $query->whereHas('users', function ($q) use ($userId) {
+            $q->where('user_id', $userId);
+        });
     }
 
     /**
-     * Get conversation avatar URL
+     * Obtenir l'autre participant dans une conversation privée
      */
-    public function getAvatarUrlAttribute()
+    public function getOtherParticipant($currentUserId)
     {
-        return $this->avatar ? asset('storage/' . $this->avatar) : null;
-    }
-
-    /**
-     * Check if conversation is private (2 users only)
-     */
-    public function isPrivate(): bool
-    {
-        return $this->type === 'private';
-    }
-
-    /**
-     * Check if conversation is a group
-     */
-    public function isGroup(): bool
-    {
-        return $this->type === 'group';
-    }
-
-    /**
-     * Get conversation display name for a specific user
-     */
-    public function getDisplayName(User $user): string
-    {
-        if ($this->isGroup()) {
-            return $this->name ?? 'Groupe sans nom';
+        if ($this->type === 'private') {
+            return $this->users()->where('user_id', '!=', $currentUserId)->first();
         }
-
-        // For private conversations, return the other user's name
-        $otherUser = $this->users()->where('user_id', '!=', $user->id)->first();
-        return $otherUser ? $otherUser->name : 'Conversation privée';
+        return null;
     }
 }
