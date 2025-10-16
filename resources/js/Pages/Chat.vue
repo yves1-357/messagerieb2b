@@ -19,6 +19,7 @@
         :conversations="conversations"
         :selected-conversation-id="selectedConversation?.id"
         :search-query="searchQuery"
+        :is-loading="isLoading"
         @select-conversation="selectConversation"
         @new-group="handleNewGroup"
         @new-message="handleNewMessage"
@@ -244,6 +245,8 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted } from 'vue';
+import { router } from '@inertiajs/vue3';
+import axios from 'axios';
 import { usePage } from '@inertiajs/vue3';
 import Profil from './Profil.vue';
 import Sidebar from './Sidebar.vue';
@@ -258,72 +261,10 @@ const newMessage = ref('');
 const messagesContainer = ref(null);
 const messageInput = ref(null);
 
-// Données fictives pour les conversations - synchronisées avec Sidebar.vue
-const conversations = ref([
-  {
-    id: 1,
-    name: 'Carmen Goina',
-    avatarColor: '#8B5CF6',
-    isOnline: true,
-    lastMessage: 'hey question par curiosité tes sur vuemo',
-    lastMessageTime: new Date(Date.now() - 5 * 60000), // 5 minutes ago
-    lastMessageFromMe: false,
-    unreadCount: 1
-  },
-  {
-    id: 2,
-    name: 'J, Marian, Celia and Fi Fou',
-    avatarColor: '#10B981',
-    isOnline: false,
-    lastMessage: 'You: J created the group «J, Marian, Celia a...',
-    lastMessageTime: new Date(Date.now() - 10 * 60000), // 10 minutes ago
-    lastMessageFromMe: true,
-    unreadCount: 2
-  },
-  {
-    id: 3,
-    name: 'Winner 💎💎💎',
-    avatarColor: '#F59E0B',
-    isOnline: false,
-    lastMessage: '📷 Photo',
-    lastMessageTime: new Date(Date.now() - 24 * 60 * 60000), // 1 day ago
-    lastMessageFromMe: false,
-    unreadCount: 0
-  },
-  {
-    id: 4,
-    name: 'August MavisVista',
-    avatarColor: '#EF4444',
-    isOnline: true,
-    lastMessage: 'Hallo, goedemorgen. Kampioen.',
-    lastMessageTime: new Date(Date.now() - 24 * 60 * 60000), // 1 day ago
-    lastMessageFromMe: false,
-    unreadCount: 0
-  },
-  {
-    id: 5,
-    name: 'Aurore Manager 🌸',
-    avatarColor: '#EC4899',
-    isOnline: false,
-    lastMessage: '😊',
-    lastMessageTime: new Date(Date.now() - 2 * 24 * 60 * 60000), // 2 days ago
-    lastMessageFromMe: false,
-    unreadCount: 0
-  }
-]);
-
-// Messages fictifs pour les conversations
-const allMessages = ref({
-  1: [
-    {
-      id: 1,
-      content: 'hey question par curiosité tes sur vuemo',
-      timestamp: new Date(Date.now() - 5 * 60000),
-      isOwn: false,
-      status: 'read'
-    }
-  ]
-});
+// États pour les données réelles
+const conversations = ref([]);
+const allMessages = ref({});
+const isLoading = ref(false);
 
 // Computed
 const currentMessages = computed(() => {
@@ -336,9 +277,9 @@ const selectedConversationUser = computed(() => {
 
   return {
     ...selectedConversation.value,
-    email: 'carmen.goina@example.com',
-    phone: '+32 486 47 23 54',
-    username: 'Loredana667',
+    email: selectedConversation.value.email || 'N/A',
+    phone: selectedConversation.value.phone || 'N/A',
+    username: selectedConversation.value.username || 'N/A',
     lastSeen: new Date(Date.now() - 6 * 60000) // 6 minutes ago
   };
 });
@@ -374,9 +315,15 @@ const getLastSeenText = (lastSeen) => {
   return 'vu pour la dernière fois il y a 6 minutes';
 };
 
-const selectConversation = (conversation) => {
+const selectConversation = async (conversation) => {
   selectedConversation.value = conversation;
   showUserInfo.value = false; // Fermer le panel utilisateur
+
+  // Charger les messages de cette conversation si pas encore chargés
+  if (!allMessages.value[conversation.id]) {
+    await loadConversationMessages(conversation.id);
+  }
+
   scrollToBottom();
 };
 
@@ -454,37 +401,27 @@ const handleThemeChanged = (theme) => {
   localStorage.setItem('theme', theme);
 };
 
-const handleStartConversation = (user) => {
-  // Chercher si une conversation avec cet utilisateur existe déjà
-  let conversation = conversations.value.find(conv =>
-    conv.name === user.name ||
-    (conv.users && conv.users.some(u => u.id === user.id))
-  );
+const handleStartConversation = async (user) => {
+  try {
+    // Vérifier si une conversation avec cet utilisateur existe déjà
+    const existingConversation = conversations.value.find(conv =>
+      conv.users && conv.users.some(u => u.id === user.id)
+    );
 
-  // Si aucune conversation n'existe, créer une nouvelle
-  if (!conversation) {
-    conversation = {
-      id: Date.now(), // ID temporaire
-      name: user.name,
-      avatarColor: user.avatarColor || '#8B5CF6',
-      lastMessage: '',
-      lastMessageTime: 'now',
-      isOnline: true,
-      unreadCount: 0,
-      messages: [],
-      users: [user] // Ajouter l'utilisateur à la conversation
-    };
+    if (existingConversation) {
+      // Sélectionner la conversation existante
+      await selectConversation(existingConversation);
+    } else {
+      // Créer une nouvelle conversation
+      await createConversation(user);
+    }
 
-    // Ajouter la nouvelle conversation à la liste
-    conversations.value.unshift(conversation);
+    // Fermer le UserInfo panel s'il est ouvert
+    showUserInfo.value = false;
+    selectedUser.value = null;
+  } catch (error) {
+    console.error('Erreur lors de la création de conversation:', error);
   }
-
-  // Sélectionner la conversation
-  selectConversation(conversation);
-
-  // Fermer le UserInfo panel s'il est ouvert
-  showUserInfo.value = false;
-  selectedUser.value = null;
 };
 
 const handleNewGroup = () => {
@@ -554,9 +491,59 @@ const scrollToBottom = () => {
   });
 };
 
-// Lifecycle
-onMounted(() => {
-  // Pas de conversation sélectionnée par défaut
+// ========================
+// FONCTIONS API
+// ========================
+
+// Charger les conversations depuis l'API
+const loadConversations = async () => {
+  try {
+    isLoading.value = true;
+    const response = await axios.get('/api/conversations');
+    conversations.value = response.data.data || [];
+  } catch (error) {
+    console.error('Erreur lors du chargement des conversations:', error);
+    conversations.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Charger les messages d'une conversation
+const loadConversationMessages = async (conversationId) => {
+  try {
+    const response = await axios.get(`/api/conversations/${conversationId}`);
+    allMessages.value[conversationId] = response.data.messages || [];
+  } catch (error) {
+    console.error('Erreur lors du chargement des messages:', error);
+    allMessages.value[conversationId] = [];
+  }
+};
+
+// Créer une nouvelle conversation
+const createConversation = async (user) => {
+  try {
+    const response = await axios.post('/api/conversations', {
+      user_id: user.id
+    });
+
+    const newConversation = response.data;
+
+    // Ajouter la nouvelle conversation à la liste
+    conversations.value.unshift(newConversation);
+
+    // Sélectionner la nouvelle conversation
+    selectConversation(newConversation);
+
+    return newConversation;
+  } catch (error) {
+    console.error('Erreur lors de la création de la conversation:', error);
+    throw error;
+  }
+};// Lifecycle
+onMounted(async () => {
+  // Charger les conversations
+  await loadConversations();
 
   // Initialiser le thème depuis localStorage
   const savedTheme = localStorage.getItem('theme');

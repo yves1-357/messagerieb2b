@@ -1,6 +1,6 @@
 <template>
   <div class="bg-gray-800 border-b border-gray-700">
-    <div class="p-4">
+    <div class="p-4 search-container">
       <!-- Header avec menu hamburger et recherche -->
       <div class="flex items-center justify-between mb-4">
         <!-- Menu hamburger -->
@@ -121,10 +121,12 @@
       </div>
 
       <!-- Barre de recherche -->
-      <div class="relative">
+      <div class="relative mb-3">
         <input
           v-model="searchQuery"
           @input="emitSearch"
+          @focus="showSearchTabs = true"
+          @click="showSearchTabs = true"
           type="text"
           placeholder="Rechercher..."
           class="w-full bg-gray-700 text-white placeholder-gray-400 rounded-lg px-4 py-2 pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
@@ -132,6 +134,144 @@
         <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
+      </div>
+
+      <!-- Onglets Chats/Users (affiché dès qu'on interagit avec la recherche) -->
+      <div v-if="showSearchTabs" class="mb-3">
+        <!-- Header avec bouton fermer -->
+        <div class="flex items-center justify-end mb-2">
+          <button
+            @click="closeSearchTabs"
+            class="p-1 text-gray-400 hover:text-white hover:bg-gray-700 rounded transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Onglets -->
+        <div class="flex bg-gray-700 rounded-lg p-1">
+          <button
+            @click="activeSearchTab = 'chats'"
+            class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors"
+            :class="activeSearchTab === 'chats'
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-300 hover:text-white hover:bg-gray-600'"
+          >
+            Chats
+            <span v-if="filteredConversations.length > 0" class="ml-1 bg-gray-500 text-xs px-1.5 py-0.5 rounded-full">
+              {{ filteredConversations.length }}
+            </span>
+          </button>
+          <button
+            @click="activeSearchTab = 'users'; loadAllUsers()"
+            class="flex-1 py-2 px-3 text-sm font-medium rounded-md transition-colors"
+            :class="activeSearchTab === 'users'
+              ? 'bg-blue-600 text-white'
+              : 'text-gray-300 hover:text-white hover:bg-gray-600'"
+          >
+            Users
+            <span v-if="availableUsers.length > 0" class="ml-1 bg-gray-500 text-xs px-1.5 py-0.5 rounded-full">
+              {{ availableUsers.length }}
+            </span>
+          </button>
+        </div>
+      </div>      <!-- Contenu des onglets (affiché dès qu'on interagit avec la recherche) -->
+      <div v-if="showSearchTabs" class="space-y-2">
+        <!-- Onglet Chats -->
+        <div v-if="activeSearchTab === 'chats'">
+          <div v-if="filteredConversations.length === 0" class="text-center py-4 text-gray-400">
+            <p class="text-sm">Aucune conversation trouvée</p>
+          </div>
+          <div v-else class="space-y-1">
+            <div
+              v-for="conversation in filteredConversations"
+              :key="conversation.id"
+              class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors"
+            >
+              <div class="relative">
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                  :style="{ backgroundColor: conversation.avatar_color || conversation.avatarColor || '#8B5CF6' }"
+                >
+                  {{ getInitials(conversation.name) }}
+                </div>
+                <div
+                  v-if="conversation.is_online || conversation.isOnline"
+                  class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-gray-800 rounded-full"
+                ></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-medium truncate">{{ conversation.name }}</p>
+                <p class="text-gray-400 text-sm truncate">
+                  {{ conversation.last_message || conversation.lastMessage || 'Aucun message' }}
+                </p>
+              </div>
+              <div v-if="(conversation.unread_count || conversation.unreadCount || 0) > 0" class="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5">
+                {{ (conversation.unread_count || conversation.unreadCount) > 99 ? '99+' : (conversation.unread_count || conversation.unreadCount) }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Onglet Users -->
+        <div v-else-if="activeSearchTab === 'users'">
+          <!-- Loading -->
+          <div v-if="isLoadingUsers" class="text-center py-4">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+            <p class="text-gray-400 text-sm mt-2">Chargement des utilisateurs...</p>
+          </div>
+
+          <!-- Aucun utilisateur disponible -->
+          <div v-else-if="availableUsers.length === 0" class="text-center py-4 text-gray-400">
+            <svg class="w-12 h-12 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"/>
+            </svg>
+            <p class="text-sm">Aucun utilisateur disponible</p>
+            <p class="text-xs text-gray-500 mt-1">Tous les utilisateurs sont déjà dans vos conversations</p>
+          </div>
+
+          <!-- Liste des utilisateurs -->
+          <div v-else class="space-y-1">
+            <div
+              v-for="user in filteredUsers"
+              :key="user.id"
+              @click="showUserInfo(user)"
+              class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg cursor-pointer transition-colors"
+            >
+              <div class="relative">
+                <div
+                  class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+                  :style="{ backgroundColor: user.avatar_color || '#8B5CF6' }"
+                >
+                  {{ getInitials(user.name) }}
+                </div>
+                <div
+                  class="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-gray-800 rounded-full"
+                  :class="user.is_online ? 'bg-green-500' : 'bg-gray-500'"
+                ></div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-white font-medium truncate">{{ user.name }}</p>
+                <p class="text-gray-400 text-sm truncate">
+                  {{ user.username ? '@' + user.username : user.email }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Bouton Load More -->
+            <div v-if="hasMoreUsers" class="pt-2">
+              <button
+                @click="loadMoreUsers"
+                :disabled="isLoadingUsers"
+                class="w-full bg-gray-700 hover:bg-gray-600 disabled:bg-gray-700 disabled:opacity-50 text-white py-2 px-4 rounded-lg transition-colors text-sm"
+              >
+                {{ isLoadingUsers ? 'Chargement...' : 'Voir plus d\'utilisateurs' }}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -403,7 +543,15 @@ const currentUser = computed(() => page.props.auth?.user);
 const showMenu = ref(false);
 const nightMode = ref(true);
 const searchQuery = ref('');
+const activeSearchTab = ref('chats'); // Pour les onglets Chats/Users dans la recherche
+const showSearchTabs = ref(false); // Pour afficher les onglets dès qu'on interagit avec la recherche
 const menuDropdown = ref(null);
+
+// Variables pour la gestion des utilisateurs disponibles
+const availableUsers = ref([]);
+const isLoadingUsers = ref(false);
+const usersPage = ref(1);
+const hasMoreUsers = ref(true);
 
 // État pour les modals Settings
 const showSettingsModal = ref(false);
@@ -463,6 +611,35 @@ const totalUnreadCount = computed(() => {
   }, 0);
 });
 
+// Computed pour filtrer les conversations selon la recherche
+const filteredConversations = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return props.conversations;
+  }
+  return props.conversations.filter(conversation =>
+    conversation.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+    (conversation.last_message || conversation.lastMessage || '').toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
+
+// Computed pour filtrer les utilisateurs selon la recherche et l'onglet actif
+const filteredUsers = computed(() => {
+  // Si on est dans l'onglet Users, on montre TOUS les utilisateurs chargés
+  if (activeSearchTab.value === 'users') {
+    return availableUsers.value;
+  }
+
+  // Sinon, filtrage normal par recherche
+  if (!searchQuery.value.trim()) {
+    return availableUsers.value;
+  }
+  return availableUsers.value.filter(user =>
+    user.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+    user.username?.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.value.toLowerCase())
+  );
+});
+
 // Méthodes
 const toggleMenu = () => {
   showMenu.value = !showMenu.value;
@@ -481,6 +658,22 @@ const handleMenuAction = (action) => {
     // à faire : Implémenter les autres actions du menu
   }
   showMenu.value = false;
+};
+
+// Méthodes pour la gestion des onglets de recherche
+const closeSearchTabs = () => {
+  showSearchTabs.value = false;
+  searchQuery.value = ''; // Réinitialiser la recherche
+  activeSearchTab.value = 'chats'; // Revenir à l'onglet Chats par défaut
+};
+
+// Fermer les onglets si clic à l'extérieur
+const handleClickOutsideSearch = (event) => {
+  // Vérifier si le clic est en dehors de la zone de recherche et des onglets
+  const searchContainer = event.target.closest('.search-container');
+  if (!searchContainer && showSearchTabs.value) {
+    closeSearchTabs();
+  }
 };
 
 // Méthodes pour le modal Settings
@@ -707,19 +900,116 @@ const handleClickOutside = (event) => {
   }
 };
 
+// ========================
+// GESTION DES UTILISATEURS DISPONIBLES (pour les onglets)
+// ========================
+
+// Charger TOUS les utilisateurs disponibles (sans filtre de recherche)
+const loadAllUsers = async (page = 1) => {
+  try {
+    isLoadingUsers.value = true;
+    const response = await axios.get('/api/users/available', {
+      params: {
+        page
+        // Pas de search : on charge TOUS les utilisateurs
+      }
+    });
+
+    const result = response.data;
+    const newUsers = result.users || [];
+
+    if (page === 1) {
+      // Première page : remplacer
+      availableUsers.value = newUsers;
+    } else {
+      // Pages suivantes : ajouter
+      availableUsers.value = [...availableUsers.value, ...newUsers];
+    }
+
+    // Gérer la pagination
+    if (result.pagination) {
+      hasMoreUsers.value = result.pagination.has_next_page;
+      usersPage.value = page;
+    }
+
+  } catch (error) {
+    console.error('Erreur lors du chargement des utilisateurs:', error);
+    if (page === 1) availableUsers.value = [];
+  } finally {
+    isLoadingUsers.value = false;
+  }
+};
+
+// Charger les utilisateurs disponibles pour les onglets (avec recherche)
+const loadAvailableUsers = async (page = 1) => {
+  try {
+    isLoadingUsers.value = true;
+    const response = await axios.get('/api/users/available', {
+      params: {
+        page,
+        search: searchQuery.value
+      }
+    });
+
+    const result = response.data;
+    const newUsers = result.users || [];
+
+    if (page === 1) {
+      // Première page : remplacer
+      availableUsers.value = newUsers;
+    } else {
+      // Pages suivantes : ajouter
+      availableUsers.value = [...availableUsers.value, ...newUsers];
+    }
+
+    // Gérer la pagination
+    if (result.pagination) {
+      hasMoreUsers.value = result.pagination.has_next_page;
+      usersPage.value = page;
+    }
+
+  } catch (error) {
+    console.error('Erreur lors du chargement des utilisateurs:', error);
+    if (page === 1) availableUsers.value = [];
+  } finally {
+    isLoadingUsers.value = false;
+  }
+};
+
+// Charger plus d'utilisateurs (pagination)
+const loadMoreUsers = async () => {
+  if (hasMoreUsers.value && !isLoadingUsers.value) {
+    await loadAllUsers(usersPage.value + 1);
+  }
+};
+
+// Démarrer une conversation avec un utilisateur depuis les onglets
+const startConversationWithUser = async (user) => {
+  emit('start-conversation', user);
+  // Fermer les onglets et revenir au menu principal après avoir créé la conversation
+  closeSearchTabs();
+};
+
+// Afficher les informations d'un utilisateur
+const showUserInfo = (user) => {
+  emit('show-user-info', { user });
+};
+
 // Events
-const emit = defineEmits(['search', 'user-updated', 'theme-changed', 'show-user-info', 'start-conversation']);
+const emit = defineEmits(['search', 'user-updated', 'theme-changed', 'show-user-info', 'start-conversation', 'load-more-users']);
 
 // Watch pour émettre les changements de recherche
 const emitSearch = () => {
   emit('search', searchQuery.value);
+
+  // Si on recherche et qu'on est dans l'onglet Chats, filtrer les conversations
+  // L'onglet Users affiche toujours tous les utilisateurs chargés
 };
-
-
 
 // Lifecycle
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
+  document.addEventListener('click', handleClickOutsideSearch);
 
   // Initialiser le thème depuis localStorage
   const savedTheme = localStorage.getItem('theme');
@@ -730,5 +1020,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
+  document.removeEventListener('click', handleClickOutsideSearch);
 });
 </script>
