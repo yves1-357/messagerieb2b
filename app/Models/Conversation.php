@@ -10,14 +10,16 @@ class Conversation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
+        'name_group',
         'type', // 'private' ou 'group'
+        'is_group',
         'created_by',
         'last_message_at'
     ];
 
     protected $casts = [
         'last_message_at' => 'datetime',
+        'is_group' => 'boolean',
     ];
 
     /**
