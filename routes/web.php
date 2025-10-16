@@ -64,6 +64,7 @@ Route::middleware('auth')->group(function () {
     // Routes pour les conversations
     Route::get('/api/conversations', [ConversationController::class, 'index']);
     Route::post('/api/conversations', [ConversationController::class, 'store']);
+    Route::post('/api/conversations/group', [ConversationController::class, 'createGroup']);
     Route::get('/api/conversations/{conversation}', [ConversationController::class, 'show']);
 
     // Routes pour les messages
