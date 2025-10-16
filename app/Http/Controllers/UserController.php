@@ -184,50 +184,28 @@ class UserController extends Controller
             ->values()
             ->toArray();
 
-        // Requête pour tous les utilisateurs (sauf l'utilisateur actuel)
-        $query = User::select('id', 'name', 'username', 'email', 'status', 'last_seen_at', 'created_at')
-            ->where('id', '!=', $currentUser->id);
-
-        // Filtrage par recherche
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
-            });
-        }
-
-        // Pagination et tri alphabétique
-        $users = $query->orderBy('name', 'asc')
-            ->offset(($page - 1) * $perPage)
+        // Requête simplifiée pour tous les utilisateurs (sauf l'utilisateur actuel)
+        $users = User::select('id', 'name', 'username', 'email', 'status', 'last_seen_at', 'created_at')
+            ->where('id', '!=', $currentUser->id)
+            ->orderBy('name', 'asc')
             ->limit($perPage)
             ->get()
-            ->map(function ($user) use ($existingConversationUserIds) {
+            ->map(function ($user) {
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
-                    'username' => $user->username,
+                    'username' => $user->username ?? '',
                     'email' => $user->email,
-                    'status' => $user->status,
+                    'status' => $user->status ?? 'offline',
                     'last_seen_at' => $user->last_seen_at,
-                    'avatar_color' => $user->avatar_color ?? '#8B5CF6',
-                    'is_online' => $user->isOnline(),
-                    'status_info' => $user->getStatusWithTime(),
-                    'has_conversation' => in_array($user->id, $existingConversationUserIds),
+                    'avatar_color' => '#8B5CF6', // Couleur par défaut
+                    'is_online' => false, // Simplifié pour le moment
+                    'avatar' => null, // Pas d'avatar pour le moment
                 ];
             });
 
-        // Compter le total pour la pagination
+        // Compter le total simplifié
         $totalCount = User::where('id', '!=', $currentUser->id)->count();
-        if ($search) {
-            $totalCount = User::where('id', '!=', $currentUser->id)
-                ->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('username', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%");
-                })
-                ->count();
-        }
 
         $lastPage = ceil($totalCount / $perPage);
 
