@@ -37,15 +37,39 @@
               class="flex items-center space-x-3 cursor-pointer hover:bg-gray-700 rounded-lg p-2 -m-2 transition-colors"
             >
               <div
-                class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
-                :style="{ backgroundColor: selectedConversation.avatarColor }"
+                class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm relative"
+                :style="{ backgroundColor: selectedConversation.avatar_color || selectedConversation.avatarColor || '#8B5CF6' }"
               >
-                {{ getInitials(selectedConversation.name) }}
+                <!-- Icône de groupe si c'est un groupe -->
+                <svg v-if="selectedConversation.is_group" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+                </svg>
+                <!-- Initiales pour les conversations privées -->
+                <span v-else>{{ getInitials(selectedConversation.name) }}</span>
+
+                <!-- Indicateur de statut en ligne (seulement pour les conversations privées) -->
+                <div
+                  v-if="!selectedConversation.is_group"
+                  class="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-2 border-gray-800 rounded-full"
+                  :class="{
+                    'bg-green-500': conversationUserStatus.color === 'green',
+                    'bg-yellow-500': conversationUserStatus.color === 'yellow',
+                    'bg-gray-500': conversationUserStatus.color === 'gray'
+                  }"
+                ></div>
+
+                <!-- Badge nombre de participants pour les groupes -->
+                <div
+                  v-if="selectedConversation.is_group && selectedConversation.participants_count"
+                  class="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-blue-500 border-2 border-gray-800 rounded-full flex items-center justify-center"
+                >
+                  <span class="text-xs font-bold text-white">{{ selectedConversation.participants_count }}</span>
+                </div>
               </div>
               <div>
                 <h2 class="font-semibold text-white">{{ selectedConversation.name }}</h2>
                 <p class="text-sm text-gray-400">
-                  {{ selectedConversation.isOnline ? 'en ligne' : getLastSeenText(selectedConversation.lastSeen) }}
+                  {{ conversationUserStatus.text }}
                 </p>
               </div>
             </div>
@@ -240,6 +264,166 @@
       @start-conversation="handleStartConversation"
       class="h-full"
     />
+
+    <!-- Modal de création de groupe -->
+    <div v-if="showCreateGroupModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-11/12 max-w-4xl h-5/6 flex flex-col">
+        <!-- Header du modal -->
+        <div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Créer un nouveau groupe</h3>
+          <button
+            @click="closeGroupModal"
+            class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Contenu du modal -->
+        <div class="flex-1 flex overflow-hidden">
+          <!-- Côté gauche - Utilisateurs disponibles -->
+          <div class="w-1/2 border-r dark:border-gray-700 flex flex-col">
+            <div class="p-4 border-b dark:border-gray-700">
+              <h4 class="font-medium text-gray-900 dark:text-white mb-2">Utilisateurs disponibles</h4>
+              <div class="relative">
+                <input
+                  type="text"
+                  placeholder="Rechercher un utilisateur..."
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <svg class="absolute right-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+              </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4">
+              <div v-if="isLoadingUsers" class="text-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                <p class="text-gray-500 dark:text-gray-400 mt-2">Chargement des utilisateurs...</p>
+              </div>
+
+              <div v-else-if="availableUsers.length === 0" class="text-center py-8">
+                <p class="text-gray-500 dark:text-gray-400">Aucun utilisateur disponible</p>
+              </div>
+
+              <div v-else class="space-y-2">
+                <div
+                  v-for="user in availableUsers"
+                  :key="user.id"
+                  @click="toggleUserSelection(user)"
+                  class="flex items-center p-3 rounded-lg cursor-pointer transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                  :class="{ 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700': isUserSelected(user) }"
+                >
+                  <div class="relative">
+                    <div class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-lg">
+                      {{ user.name ? user.name.charAt(0).toUpperCase() : '?' }}
+                    </div>
+                    <div
+                      class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800"
+                      :class="user.is_online ? 'bg-green-500' : 'bg-gray-400'"
+                    ></div>
+                  </div>
+
+                  <div class="ml-3 flex-1">
+                    <div class="font-medium text-gray-900 dark:text-white">{{ user.name }}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ user.email }}</div>
+                  </div>
+
+                  <div v-if="isUserSelected(user)" class="text-blue-500">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Côté droit - Configuration du groupe -->
+          <div class="w-1/2 flex flex-col">
+            <div class="p-4 border-b dark:border-gray-700">
+              <h4 class="font-medium text-gray-900 dark:text-white mb-3">Configuration du groupe</h4>
+
+              <!-- Nom du groupe -->
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Nom du groupe
+                </label>
+                <input
+                  v-model="groupName"
+                  type="text"
+                  placeholder="Entrez le nom du groupe"
+                  class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <!-- Utilisateurs sélectionnés -->
+            <div class="flex-1 overflow-y-auto p-4">
+              <div class="mb-3">
+                <h5 class="font-medium text-gray-900 dark:text-white">
+                  Participants sélectionnés ({{ selectedGroupUsers.length }})
+                </h5>
+              </div>
+
+              <div v-if="selectedGroupUsers.length === 0" class="text-center py-8">
+                <div class="text-gray-400 mb-2">
+                  <svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                  </svg>
+                </div>
+                <p class="text-gray-500 dark:text-gray-400">Aucun participant sélectionné</p>
+                <p class="text-sm text-gray-400 dark:text-gray-500">Sélectionnez des utilisateurs dans la liste de gauche</p>
+              </div>
+
+              <div v-else class="space-y-2">
+                <div
+                  v-for="user in selectedGroupUsers"
+                  :key="user.id"
+                  class="flex items-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+                >
+                  <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-semibold text-sm">
+                    {{ user.name ? user.name.charAt(0).toUpperCase() : '?' }}
+                  </div>
+                  <div class="ml-3 flex-1">
+                    <div class="font-medium text-gray-900 dark:text-white text-sm">{{ user.name }}</div>
+                  </div>
+                  <button
+                    @click="toggleUserSelection(user)"
+                    class="text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer du modal -->
+        <div class="flex items-center justify-end gap-3 p-4 border-t dark:border-gray-700">
+          <button
+            @click="closeGroupModal"
+            class="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+          >
+            Annuler
+          </button>
+          <button
+            @click="createGroup"
+            :disabled="!groupName.trim() || selectedGroupUsers.length === 0 || isSavingGroup"
+            class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          >
+            <div v-if="isSavingGroup" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            {{ isSavingGroup ? 'Création...' : 'Créer le groupe' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -266,6 +450,14 @@ const conversations = ref([]);
 const allMessages = ref({});
 const isLoading = ref(false);
 
+// États pour le modal de création de groupe
+const showCreateGroupModal = ref(false);
+const groupName = ref('');
+const availableUsers = ref([]);
+const selectedGroupUsers = ref([]);
+const isLoadingUsers = ref(false);
+const isSavingGroup = ref(false);
+
 // Computed
 const currentMessages = computed(() => {
   if (!selectedConversation.value) return [];
@@ -282,6 +474,47 @@ const selectedConversationUser = computed(() => {
     username: selectedConversation.value.username || 'N/A',
     lastSeen: new Date(Date.now() - 6 * 60000) // 6 minutes ago
   };
+});
+
+// Computed pour le statut de l'utilisateur de la conversation
+const conversationUserStatus = computed(() => {
+  if (!selectedConversation.value) return { text: 'hors ligne', color: 'gray' };
+
+  // Utiliser les données du participant si disponibles
+  if (selectedConversation.value.participant) {
+    const participant = selectedConversation.value.participant;
+
+    if (participant.status === 'online') {
+      return { text: 'en ligne', color: 'green' };
+    }
+
+    if (!participant.last_seen_at) {
+      return { text: 'hors ligne', color: 'gray' };
+    }
+
+    const lastSeen = new Date(participant.last_seen_at);
+    const now = new Date();
+    const diffInMinutes = Math.floor((now - lastSeen) / (1000 * 60));
+
+    if (diffInMinutes < 1) {
+      return { text: 'à l\'instant', color: 'yellow' };
+    } else if (diffInMinutes < 60) {
+      return { text: `il y a ${diffInMinutes} min`, color: 'yellow' };
+    } else if (diffInMinutes < 1440) { // 24 hours
+      const hours = Math.floor(diffInMinutes / 60);
+      return { text: `il y a ${hours}h`, color: 'gray' };
+    } else {
+      const days = Math.floor(diffInMinutes / 1440);
+      return { text: `il y a ${days}j`, color: 'gray' };
+    }
+  }
+
+  // Fallback avec les données directes de la conversation
+  if (selectedConversation.value.is_online) {
+    return { text: 'en ligne', color: 'green' };
+  }
+
+  return { text: 'hors ligne', color: 'gray' };
 });
 
 // Méthodes
@@ -301,20 +534,6 @@ const formatMessageTime = (timestamp) => {
   return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 
-const getLastSeenText = (lastSeen) => {
-  if (!lastSeen) return 'vu pour la dernière fois il y a longtemps';
-
-  const now = new Date();
-  const lastSeenDate = new Date(lastSeen);
-  const diff = now - lastSeenDate;
-
-  const minutes = Math.floor(diff / (1000 * 60));
-  if (minutes < 1) return 'vu à l\'instant';
-  if (minutes < 60) return `vu il y a ${minutes} minute${minutes > 1 ? 's' : ''}`;
-
-  return 'vu pour la dernière fois il y a 6 minutes';
-};
-
 const selectConversation = async (conversation) => {
   selectedConversation.value = conversation;
   showUserInfo.value = false; // Fermer le panel utilisateur
@@ -330,29 +549,51 @@ const selectConversation = async (conversation) => {
 const showConversationUserInfo = () => {
   if (!selectedConversation.value) return;
 
-  // Créer un objet utilisateur basé sur la conversation
-  const conversationUser = {
-    id: selectedConversation.value.id,
-    name: selectedConversation.value.name,
-    username: selectedConversation.value.username || null,
-    email: selectedConversation.value.email || null,
-    avatarColor: selectedConversation.value.avatarColor,
-    status: selectedConversation.value.isOnline ? 'online' : 'offline',
-    last_seen_at: selectedConversation.value.lastSeen || null,
-    created_at: selectedConversation.value.created_at || null
-  };
-
-  // Si la conversation a des utilisateurs spécifiques, utiliser le premier qui n'est pas l'utilisateur actuel
-  if (selectedConversation.value.users && selectedConversation.value.users.length > 0) {
+  // Si c'est un groupe, afficher les informations du groupe
+  if (selectedConversation.value.is_group) {
+    selectedUser.value = {
+      id: selectedConversation.value.id,
+      name: selectedConversation.value.name,
+      username: `Groupe • ${selectedConversation.value.participants_count || (selectedConversation.value.users?.length || 0)} participants`,
+      email: null,
+      is_group: true,
+      participants: selectedConversation.value.users || [],
+      participants_count: selectedConversation.value.participants_count,
+      avatarColor: '#10B981',
+      status: 'group',
+      created_at: selectedConversation.value.created_at || null
+    };
+  }
+  // Si la conversation a des utilisateurs spécifiques, utiliser l'autre participant
+  else if (selectedConversation.value.users && selectedConversation.value.users.length > 0) {
     const currentUserId = usePage().props.auth?.user?.id;
     const otherUser = selectedConversation.value.users.find(user => user.id !== currentUserId);
     if (otherUser) {
-      selectedUser.value = otherUser;
-    } else {
-      selectedUser.value = conversationUser;
+      selectedUser.value = {
+        ...otherUser,
+        avatarColor: otherUser.avatar_color
+      };
     }
-  } else {
-    selectedUser.value = conversationUser;
+  }
+  // Sinon utiliser les données participant si disponibles
+  else if (selectedConversation.value.other_user) {
+    selectedUser.value = {
+      ...selectedConversation.value.other_user,
+      avatarColor: selectedConversation.value.other_user.avatar_color
+    };
+  }
+  // Fallback : construire à partir des données de conversation
+  else {
+    selectedUser.value = {
+      id: selectedConversation.value.id,
+      name: selectedConversation.value.name,
+      username: selectedConversation.value.username || null,
+      email: selectedConversation.value.email || null,
+      avatarColor: selectedConversation.value.avatar_color || selectedConversation.value.avatarColor,
+      status: selectedConversation.value.is_online ? 'online' : 'offline',
+      last_seen_at: selectedConversation.value.lastSeen || null,
+      created_at: selectedConversation.value.created_at || null
+    };
   }
 
   showUserInfo.value = true;
@@ -409,28 +650,39 @@ const handleStartConversation = async (user) => {
     );
 
     if (existingConversation) {
-      // Sélectionner la conversation existante
       await selectConversation(existingConversation);
     } else {
-      // Créer une nouvelle conversation
-      await createConversation(user);
+      const newConversation = await createConversation(user);
+      await loadConversations();
+      const refreshedConversation = conversations.value.find(conv => conv.id === newConversation.id);
+
+      if (refreshedConversation) {
+        await selectConversation(refreshedConversation);
+      } else {
+        await selectConversation(newConversation);
+      }
     }
 
-    // Fermer le UserInfo panel s'il est ouvert
     showUserInfo.value = false;
     selectedUser.value = null;
   } catch (error) {
-    console.error('Erreur lors de la création de conversation:', error);
+    // Erreur silencieuse pour l'instant
   }
 };
 
-const handleNewGroup = () => {
-  console.log('Créer un nouveau groupe');
-  // A faire apres : Implémenter la création de groupe
+const handleNewGroup = async () => {
+  // Réinitialiser les états
+  groupName.value = '';
+  selectedGroupUsers.value = [];
+
+  // Charger les utilisateurs disponibles
+  await loadAvailableUsersForGroup();
+
+  // Ouvrir le modal
+  showCreateGroupModal.value = true;
 };
 
 const handleNewMessage = () => {
-  console.log('Nouveau message');
   // A faire apres : Implémenter nouveau message
 };
 
@@ -491,18 +743,17 @@ const scrollToBottom = () => {
   });
 };
 
-// ========================
+//
 // FONCTIONS API
-// ========================
+//
 
 // Charger les conversations depuis l'API
 const loadConversations = async () => {
   try {
     isLoading.value = true;
     const response = await axios.get('/api/conversations');
-    conversations.value = response.data.data || [];
+    conversations.value = response.data.data || response.data || [];
   } catch (error) {
-    console.error('Erreur lors du chargement des conversations:', error);
     conversations.value = [];
   } finally {
     isLoading.value = false;
@@ -515,32 +766,97 @@ const loadConversationMessages = async (conversationId) => {
     const response = await axios.get(`/api/conversations/${conversationId}`);
     allMessages.value[conversationId] = response.data.messages || [];
   } catch (error) {
-    console.error('Erreur lors du chargement des messages:', error);
     allMessages.value[conversationId] = [];
   }
 };
 
 // Créer une nouvelle conversation
 const createConversation = async (user) => {
+  const response = await axios.post('/api/conversations', {
+    user_id: user.id
+  });
+
+  const newConversation = response.data;
+  conversations.value.unshift(newConversation);
+  selectConversation(newConversation);
+  return newConversation;
+};
+
+// Group Functions
+const loadAvailableUsersForGroup = async () => {
   try {
-    const response = await axios.post('/api/conversations', {
-      user_id: user.id
+    isLoadingUsers.value = true;
+    const response = await axios.get('/api/users/available');
+    availableUsers.value = response.data.users || [];
+  } catch (error) {
+    availableUsers.value = [];
+  } finally {
+    isLoadingUsers.value = false;
+  }
+};
+
+const toggleUserSelection = (user) => {
+  const index = selectedGroupUsers.value.findIndex(u => u.id === user.id);
+  if (index > -1) {
+    selectedGroupUsers.value.splice(index, 1);
+  } else {
+    selectedGroupUsers.value.push(user);
+  }
+};
+
+const isUserSelected = (user) => {
+  return selectedGroupUsers.value.some(u => u.id === user.id);
+};
+
+const createGroup = async () => {
+  if (!groupName.value.trim()) {
+    alert('Veuillez saisir un nom de groupe');
+    return;
+  }
+
+  if (selectedGroupUsers.value.length === 0) {
+    alert('Veuillez sélectionner au moins un utilisateur');
+    return;
+  }
+
+  // Sauvegarder les données avant de fermer le modal
+  const groupNameToCreate = groupName.value;
+  const participantsToAdd = selectedGroupUsers.value.map(u => u.id);
+
+  // Fermer le modal immédiatement pour éviter les doublons
+  closeGroupModal();
+
+  try {
+    isSavingGroup.value = true;
+
+    const response = await axios.post('/api/conversations/group', {
+      name: groupNameToCreate,
+      participants: participantsToAdd
     });
 
-    const newConversation = response.data;
+    if (response.data && response.data.id) {
+      // Ajouter la nouvelle conversation à la liste
+      conversations.value.unshift(response.data);
 
-    // Ajouter la nouvelle conversation à la liste
-    conversations.value.unshift(newConversation);
+      // Sélectionner automatiquement la nouvelle conversation
+      selectedConversation.value = response.data;
+    }
 
-    // Sélectionner la nouvelle conversation
-    selectConversation(newConversation);
-
-    return newConversation;
   } catch (error) {
-    console.error('Erreur lors de la création de la conversation:', error);
-    throw error;
+    alert('Erreur lors de la création du groupe');
+  } finally {
+    isSavingGroup.value = false;
   }
-};// Lifecycle
+};
+
+const closeGroupModal = () => {
+  showCreateGroupModal.value = false;
+  groupName.value = '';
+  selectedGroupUsers.value = [];
+  availableUsers.value = [];
+};
+
+// Lifecycle
 onMounted(async () => {
   // Charger les conversations
   await loadConversations();

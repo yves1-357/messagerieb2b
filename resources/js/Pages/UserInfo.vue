@@ -2,7 +2,9 @@
   <div v-if="user" class="w-90 bg-gray-800 border-l border-gray-700 flex flex-col">
     <!-- Header avec bouton de fermeture -->
     <div class="p-4 border-b border-gray-700 flex items-center justify-between">
-      <h2 class="text-lg font-semibold text-white">User Info</h2>
+      <h2 class="text-lg font-semibold text-white">
+        {{ user.is_group ? 'Group Info' : 'User Info' }}
+      </h2>
       <button
         @click="$emit('close')"
         class="p-1 hover:bg-gray-700 rounded-lg transition-colors"
@@ -20,15 +22,20 @@
         class="w-24 h-24 rounded-full mx-auto mb-4 flex items-center justify-center text-white font-bold text-2xl shadow-lg"
         :style="{ backgroundColor: user.avatarColor || '#8B5CF6' }"
       >
-        {{ getInitials(user.name) }}
+        <!-- Icône de groupe si c'est un groupe -->
+        <svg v-if="user.is_group" class="w-10 h-10" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+        </svg>
+        <!-- Initiales pour les utilisateurs individuels -->
+        <span v-else>{{ getInitials(user.name) }}</span>
       </div>
 
       <!-- Nom et statut -->
       <h3 class="text-xl font-semibold text-white mb-1">{{ user.name }}</h3>
-      <p class="text-gray-400 text-sm mb-3">{{ user.username ? '@' + user.username : '@username' }}</p>
+      <p class="text-gray-400 text-sm mb-3">{{ user.username || '@username' }}</p>
 
-      <!-- Statut en ligne -->
-      <div class="flex items-center justify-center space-x-2 mb-4">
+      <!-- Statut en ligne (seulement pour les utilisateurs individuels) -->
+      <div v-if="!user.is_group" class="flex items-center justify-center space-x-2 mb-4">
         <div
           class="w-2 h-2 rounded-full"
           :class="{
@@ -40,8 +47,13 @@
         <span class="text-sm text-gray-400">{{ userStatus.text }}</span>
       </div>
 
-      <!-- Actions rapides -->
-      <div v-if="!isOwnProfile" class="flex space-x-3">
+      <!-- Actions rapides pour groupes -->
+      <div v-if="user.is_group" class="bg-gray-700 rounded-lg p-3">
+        <p class="text-sm text-gray-300 text-center">Informations du groupe</p>
+      </div>
+
+      <!-- Actions rapides pour utilisateurs individuels -->
+      <div v-else-if="!isOwnProfile" class="flex space-x-3">
         <button
           @click="startConversation"
           class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
@@ -65,13 +77,48 @@
       </div>
     </div>
 
-    <!-- Informations détaillées -->
-    <div class="p-4 border-b border-gray-700">
+    <!-- Participants du groupe (si c'est un groupe) -->
+    <div v-if="user.is_group" class="p-4 border-b border-gray-700">
+      <h4 class="text-sm font-medium text-gray-300 mb-3">
+        Participants ({{ user.participants?.length || user.participants_count || 0 }})
+      </h4>
+
+      <div v-if="user.participants && user.participants.length > 0" class="space-y-3">
+        <div
+          v-for="participant in user.participants"
+          :key="participant.id"
+          class="flex items-center space-x-3 p-2 hover:bg-gray-700 rounded-lg transition-colors"
+        >
+          <div
+            class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm"
+            :style="{ backgroundColor: participant.avatar_color || '#8B5CF6' }"
+          >
+            {{ getInitials(participant.name) }}
+          </div>
+
+          <div class="flex-1">
+            <div class="flex items-center space-x-2">
+              <span class="font-medium text-white">{{ participant.name }}</span>
+              <div
+                v-if="participant.is_online"
+                class="w-2 h-2 bg-green-500 rounded-full"
+              ></div>
+            </div>
+            <p class="text-sm text-gray-400">{{ participant.email }}</p>
+          </div>
+        </div>
+      </div>
+
+      <div v-else class="text-center py-4">
+        <p class="text-gray-400 text-sm">Aucun participant trouvé</p>
+      </div>
+    </div>
+
+    <!-- Informations détaillées (pour les utilisateurs individuels) -->
+    <div v-else class="p-4 border-b border-gray-700">
       <h4 class="text-sm font-medium text-gray-300 mb-3">Informations</h4>
 
       <div class="space-y-3">
-
-
         <!-- Email -->
         <div class="flex items-center space-x-3">
           <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

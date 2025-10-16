@@ -178,7 +178,7 @@
           </button>
         </div>
       </div>      <!-- Contenu des onglets (affiché dès qu'on interagit avec la recherche) -->
-      <div v-if="showSearchTabs" class="space-y-2">
+      <div v-if="showSearchTabs" class="space-y-2 max-h-[60vh] overflow-y-auto scrollbar-hide">
         <!-- Onglet Chats -->
         <div v-if="activeSearchTab === 'chats'">
           <div v-if="filteredConversations.length === 0" class="text-center py-4 text-gray-400">
@@ -1023,3 +1023,15 @@ onUnmounted(() => {
   document.removeEventListener('click', handleClickOutsideSearch);
 });
 </script>
+
+<style scoped>
+/* Masquer la scrollbar pour un look professionnel */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari et Chrome */
+}
+</style>
