@@ -13,11 +13,11 @@ return new class extends Migration
     {
         Schema::create('conversations', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->nullable(); // Nom du groupe ou null pour conversation privée
-            $table->text('description')->nullable(); // Description du groupe
-            $table->enum('type', ['private', 'group'])->default('private');
+            $table->string('name_group')->nullable(); // Nom du groupe (null pour conversations privées)
+            $table->string('type')->default('private'); // 'private' ou 'group'
+            $table->boolean('is_group')->default(false);
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->string('avatar')->nullable(); // Avatar du groupe
+            $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
         });
     }

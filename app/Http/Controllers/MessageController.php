@@ -2,58 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Message;
-use App\Models\Conversation;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class MessageController extends Controller
 {
     /**
-     * Display messages for a conversation.
+     * Display a listing of the resource.
      */
-    public function index(Conversation $conversation)
+    public function index()
     {
-        $user = Auth::user();
-
-        // Vérifier l'accès
-        if (!$conversation->users()->where('user_id', $user->id)->exists()) {
-            abort(403);
-        }
-
-        $messages = $conversation->messages()
-            ->with('user')
-            ->orderBy('created_at', 'asc')
-            ->get();
-
-        return response()->json($messages);
+        //
     }
 
     /**
-     * Store a newly created message.
+     * Show the form for creating a new resource.
      */
-    public function store(Request $request, Conversation $conversation)
+    public function create()
     {
-        $user = Auth::user();
+        //
+    }
 
-        // Vérifier l'accès
-        if (!$conversation->users()->where('user_id', $user->id)->exists()) {
-            abort(403);
-        }
-
-        $request->validate([
-            'content' => 'required|string',
-            'type' => 'in:text,image,file',
-        ]);
-
-        $message = Message::create([
-            'conversation_id' => $conversation->id,
-            'user_id' => $user->id,
-            'content' => $request->input('content'),
-            'type' => $request->input('type', 'text'),
-        ]);
-
-        return response()->json($message->load('user'));
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        //
     }
 
     /**

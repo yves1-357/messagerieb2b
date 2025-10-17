@@ -15,13 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('conversation_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->enum('role', ['admin', 'member'])->default('member');
-            $table->timestamp('joined_at')->useCurrent();
+            $table->timestamp('joined_at')->nullable();
             $table->timestamp('left_at')->nullable();
-            $table->boolean('notifications_enabled')->default(true);
             $table->timestamps();
 
-            // Index unique pour éviter les doublons
+            // Index pour améliorer les performances
             $table->unique(['conversation_id', 'user_id']);
         });
     }
