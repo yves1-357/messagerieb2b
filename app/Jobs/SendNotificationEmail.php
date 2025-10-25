@@ -1,43 +1,41 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Mail;
 
 use App\Models\Notification;
-use App\Mail\NewNotification;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Bus\Queueable;
+use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Mail;
 
-class SendNotificationEmail implements ShouldQueue
+class SendNotificationEmail extends Mailable
 {
-    use Queueable, Dispatchable, InteractsWithQueue, SerializesModels;
+    use Queueable, SerializesModels;
 
-    protected $notification;
+    public $notification;
 
-    /**
-     *
-     */
     public function __construct(Notification $notification)
     {
         $this->notification = $notification;
     }
 
-    /**
-     * Execute.
-     */
-    public function handle(): void
+    public function envelope(): Envelope
     {
-        $user = $this->notification->user;
+        return new Envelope(
+            subject: 'Nouvelle notification - QuickChat',
+        );
+    }
 
-        // Vérifier si l'utilisateur veut des notifications par email
-        if ($user->email_notifications) {
-            Mail::to($user->email)->send(new NewNotification($this->notification));
+    public function content(): Content
+    {
+        return new Content(
+            view: 'emails.new-notification',
+        );
+    }
 
-            // Marquer comme envoyé
-            $this->notification->update(['emailed' => true]);
-        }
+    public function attachments(): array
+    {
+        return [];
     }
 }
