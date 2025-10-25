@@ -18,13 +18,13 @@ class UserController extends Controller
         $search = $request->input('search');
         $currentUser = Auth::user();
 
-        $query = User::select('id', 'name', 'username', 'avatar', 'status', 'last_seen_at')
+        $query = User::select('id', 'name', 'email', 'status', 'last_seen_at')
             ->where('id', '!=', $currentUser->id);
 
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%");
+                  ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
@@ -45,8 +45,8 @@ class UserController extends Controller
             return response()->json([]);
         }
 
-        $users = User::select('id', 'name', 'username', 'avatar', 'status', 'last_seen_at')
-            ->where('username', 'like', "%{$username}%")
+        $users = User::select('id', 'name', 'email', 'status', 'last_seen_at')
+            ->where('email', 'like', "%{$username}%")
             ->where('id', '!=', $currentUser->id)
             ->limit(10)
             ->get();
@@ -185,7 +185,7 @@ class UserController extends Controller
             ->toArray();
 
         // Requête simplifiée pour tous les utilisateurs (sauf l'utilisateur actuel)
-        $users = User::select('id', 'name', 'username', 'email', 'status', 'last_seen_at', 'created_at')
+        $users = User::select('id', 'name', 'email', 'status', 'last_seen_at', 'created_at')
             ->where('id', '!=', $currentUser->id)
             ->orderBy('name', 'asc')
             ->limit($perPage)
@@ -194,7 +194,6 @@ class UserController extends Controller
                 return [
                     'id' => $user->id,
                     'name' => $user->name,
-                    'username' => $user->username ?? '',
                     'email' => $user->email,
                     'status' => $user->status ?? 'offline',
                     'last_seen_at' => $user->last_seen_at,
