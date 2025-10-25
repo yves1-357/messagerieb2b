@@ -64,12 +64,12 @@ class SendMessageNotification implements ShouldQueue
                                 new NewMessageNotification($this->message, $recipient)
                             );
 
-                            Log::info("✅ Email notification sent successfully", [
+                            Log::info("Email notification sent successfully", [
                                 'recipient' => $recipient->email,
                                 'message_id' => $this->message->id
                             ]);
                         } catch (\Exception $e) {
-                            Log::error("❌ Failed to send email to {$recipient->email}", [
+                            Log::error("Failed to send email to {$recipient->email}", [
                                 'error' => $e->getMessage(),
                                 'trace' => $e->getTraceAsString()
                             ]);
