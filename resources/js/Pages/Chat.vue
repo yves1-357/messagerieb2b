@@ -121,22 +121,8 @@
 
               <div v-for="message in currentMessages" :key="message.id" class="flex" :class="{ 'justify-end': message.isOwn, 'justify-start': !message.isOwn }">
 
-                <!-- Messages des autres -->
-                <div v-if="!message.isOwn" class="flex items-end space-x-2 max-w-md">
-                  <div
-                    class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                    :style="{ backgroundColor: selectedConversation.avatarColor }"
-                  >
-                    {{ getInitials(selectedConversation.name) }}
-                  </div>
-                  <div class="bg-gray-700 text-white rounded-2xl rounded-bl-sm px-4 py-2 shadow-lg">
-                    <p class="text-sm">{{ message.content }}</p>
-                    <span class="text-xs text-gray-400 mt-1 block">{{ formatMessageTime(message.timestamp) }}</span>
-                  </div>
-                </div>
-
-                <!-- Mes messages -->
-                <div v-else class="flex items-end space-x-2 max-w-md">
+                <!-- Mes messages (à droite, bleu) -->
+                <div v-if="message.isOwn" class="flex items-end justify-end space-x-2 max-w-md ml-auto">
                   <div class="bg-blue-600 text-white rounded-2xl rounded-br-sm px-4 py-2 shadow-lg">
                     <p class="text-sm">{{ message.content }}</p>
                     <div class="flex items-center justify-end space-x-1 mt-1">
@@ -148,6 +134,20 @@
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                       </svg>
                     </div>
+                  </div>
+                </div>
+
+                <!-- Messages des autres (à gauche, gris) -->
+                <div v-else class="flex items-end space-x-2 max-w-md">
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
+                    :style="{ backgroundColor: selectedConversation.avatarColor || '#8B5CF6' }"
+                  >
+                    {{ getInitials(selectedConversation.name) }}
+                  </div>
+                  <div class="bg-gray-700 text-white rounded-2xl rounded-bl-sm px-4 py-2 shadow-lg">
+                    <p class="text-sm">{{ message.content }}</p>
+                    <span class="text-xs text-gray-400 mt-1 block">{{ formatMessageTime(message.timestamp) }}</span>
                   </div>
                 </div>
               </div>
@@ -167,6 +167,7 @@
 
             <!-- Zone de texte avec style -->
             <div class="flex-1 relative">
+
               <textarea
                 v-model="newMessage"
                 @keydown.enter.exact.prevent="sendMessage"
@@ -189,11 +190,12 @@
 
             <!-- Bouton d'envoi-->
             <button
-              @click="sendMessage"
-              :disabled="!newMessage.trim()"
+              @click.prevent="sendMessage"
+              :disabled="!newMessage.trim() || isSendingMessage"
               class="w-12 h-12 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-full transition-colors flex items-center justify-center"
             >
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div v-if="isSendingMessage" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <svg v-else class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
               </svg>
             </button>
@@ -428,13 +430,18 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted } from 'vue';
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue';
 import { router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { usePage } from '@inertiajs/vue3';
+import { usePusher } from '@/composables/usePusher.js';
 import Profil from './Profil.vue';
 import Sidebar from './Sidebar.vue';
 import UserInfo from './UserInfo.vue';
+
+// Récupérer l'utilisateur actuel depuis Inertia
+const { props } = usePage();
+const user = computed(() => props.auth?.user || props.user);
 
 // État de l'application
 const searchQuery = ref('');
@@ -449,6 +456,15 @@ const messageInput = ref(null);
 const conversations = ref([]);
 const allMessages = ref({});
 const isLoading = ref(false);
+const isSendingMessage = ref(false);
+
+// Polling pour les messages (alternative à Pusher)
+const pollingInterval = ref(null);
+const lastMessageCheck = ref(new Date());
+
+// Pusher setup
+const { pusher, isConnected, subscribeToConversation, unsubscribeFromConversation } = usePusher();
+let currentConversationChannel = null;
 
 // États pour le modal de création de groupe
 const showCreateGroupModal = ref(false);
@@ -461,7 +477,9 @@ const isSavingGroup = ref(false);
 // Computed
 const currentMessages = computed(() => {
   if (!selectedConversation.value) return [];
-  return allMessages.value[selectedConversation.value.id] || [];
+  const messages = allMessages.value[selectedConversation.value.id] || [];
+  // Tri par date croissante (du plus ancien au plus récent)
+  return [...messages].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 });
 
 const selectedConversationUser = computed(() => {
@@ -535,6 +553,12 @@ const formatMessageTime = (timestamp) => {
 };
 
 const selectConversation = async (conversation) => {
+  // Unsubscribe from previous conversation
+  if (currentConversationChannel && selectedConversation.value) {
+    unsubscribeFromConversation(selectedConversation.value.id);
+    currentConversationChannel = null;
+  }
+
   selectedConversation.value = conversation;
   showUserInfo.value = false; // Fermer le panel utilisateur
 
@@ -543,7 +567,51 @@ const selectConversation = async (conversation) => {
     await loadConversationMessages(conversation.id);
   }
 
+  // Subscribe to new conversation for real-time updates (Pusher - backup)
+  if (pusher && conversation.id) {
+    currentConversationChannel = subscribeToConversation(conversation.id, (data) => {
+      // Handle incoming message
+      if (data.message && data.conversation_id === conversation.id) {
+        const newMessage = {
+          ...data.message,
+          is_own: data.message.user_id === user.value.id,
+          isOwn: data.message.user_id === user.value.id
+        };
+
+        if (!allMessages.value[conversation.id]) {
+          allMessages.value[conversation.id] = [];
+        }
+
+        // Avoid duplicate messages
+        const existingMessage = allMessages.value[conversation.id].find(msg => msg.id === newMessage.id);
+        if (!existingMessage) {
+          allMessages.value[conversation.id].push(newMessage);
+
+          // Update conversation in list
+          const conversationIndex = conversations.value.findIndex(conv => conv.id === conversation.id);
+          if (conversationIndex !== -1) {
+            conversations.value[conversationIndex].last_message = newMessage.content;
+            conversations.value[conversationIndex].last_message_time = 'À l\'instant';
+            conversations.value[conversationIndex].formatted_time = newMessage.formatted_time;
+
+            // Move conversation to top if it's not the current one being viewed
+            if (selectedConversation.value?.id !== conversation.id) {
+              const updatedConversation = conversations.value.splice(conversationIndex, 1)[0];
+              conversations.value.unshift(updatedConversation);
+            }
+          }
+
+          scrollToBottom();
+        }
+      }
+    });
+  }
+
   scrollToBottom();
+
+  // Démarrer le polling pour cette conversation
+  lastMessageCheck.value = new Date();
+  startPolling();
 };
 
 const showConversationUserInfo = () => {
@@ -642,17 +710,17 @@ const handleThemeChanged = (theme) => {
   localStorage.setItem('theme', theme);
 };
 
-const handleStartConversation = async (user) => {
+const handleStartConversation = async (userToChat) => {
   try {
     // Vérifier si une conversation avec cet utilisateur existe déjà
     const existingConversation = conversations.value.find(conv =>
-      conv.users && conv.users.some(u => u.id === user.id)
+      conv.users && conv.users.some(u => u.id === userToChat.id)
     );
 
     if (existingConversation) {
       await selectConversation(existingConversation);
     } else {
-      const newConversation = await createConversation(user);
+      const newConversation = await createConversation(userToChat);
       await loadConversations();
       const refreshedConversation = conversations.value.find(conv => conv.id === newConversation.id);
 
@@ -666,7 +734,7 @@ const handleStartConversation = async (user) => {
     showUserInfo.value = false;
     selectedUser.value = null;
   } catch (error) {
-    // Erreur silencieuse pour l'instant
+    // Erreur pour l'instant à revoir
   }
 };
 
@@ -686,29 +754,73 @@ const handleNewMessage = () => {
   // A faire apres : Implémenter nouveau message
 };
 
-const sendMessage = () => {
-  if (!newMessage.value.trim() || !selectedConversation.value) return;
+const sendMessage = async () => {
+  if (!newMessage.value.trim() || !selectedConversation.value || isSendingMessage.value) return;
 
-  const message = {
-    id: Date.now(),
-    content: newMessage.value.trim(),
-    timestamp: new Date(),
-    isOwn: true,
-    status: 'sent'
-  };
-
-  if (!allMessages.value[selectedConversation.value.id]) {
-    allMessages.value[selectedConversation.value.id] = [];
-  }
-
-  allMessages.value[selectedConversation.value.id].push(message);
-  selectedConversation.value.lastMessage = message.content;
-  selectedConversation.value.lastMessageTime = message.timestamp;
-  selectedConversation.value.lastMessageFromMe = true;
-
+  const messageContent = newMessage.value.trim();
   newMessage.value = '';
   resetTextareaHeight();
-  scrollToBottom();
+
+  isSendingMessage.value = true;
+
+  try {
+    const response = await axios.post(`/api/conversations/${selectedConversation.value.id}/messages`, {
+      content: messageContent,
+      type: 'text'
+    },{
+        headers: {
+            'X-Inertia': false,
+        'X-Requested-With': 'XMLHttpRequest'
+        }
+    });
+
+    if (response.data && response.data.message) {
+      // Ajouter le message à la liste locale
+      if (!allMessages.value[selectedConversation.value.id]) {
+        allMessages.value[selectedConversation.value.id] = [];
+      }
+
+      // Marquer le message comme étant le vôtre
+      const messageWithOwnership = {
+        ...response.data.message,
+        isOwn: true,
+        is_own: true
+      };
+
+      allMessages.value[selectedConversation.value.id].push(messageWithOwnership);
+
+
+
+      // Mettre à jour la conversation dans la liste
+      const conversationIndex = conversations.value.findIndex(conv => conv.id === selectedConversation.value.id);
+      if (conversationIndex !== -1) {
+        conversations.value[conversationIndex].last_message = response.data.message.content;
+        conversations.value[conversationIndex].last_message_time = 'À l\'instant';
+        conversations.value[conversationIndex].formatted_time = response.data.message.formatted_time;
+
+        // Remonter la conversation en haut de la liste
+        const updatedConversation = conversations.value.splice(conversationIndex, 1)[0];
+        conversations.value.unshift(updatedConversation);
+      }
+
+      scrollToBottom();
+    }
+
+  } catch (error) {
+    console.error('Erreur lors de l\'envoi du message:', error);
+    // Remettre le contenu dans le champ en cas d'erreur
+    newMessage.value = messageContent;
+
+    let errorMessage = 'Erreur lors de l\'envoi du message';
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage = error.response.data.message;
+    }
+
+    // Optionnel : Afficher une notification d'erreur
+    alert(errorMessage);
+  } finally {
+    isSendingMessage.value = false;
+  }
 };
 
 const handleShiftEnter = (event) => {
@@ -763,17 +875,80 @@ const loadConversations = async () => {
 // Charger les messages d'une conversation
 const loadConversationMessages = async (conversationId) => {
   try {
-    const response = await axios.get(`/api/conversations/${conversationId}`);
-    allMessages.value[conversationId] = response.data.messages || [];
+    const response = await axios.get(`/api/conversations/${conversationId}/messages`);
+
+    if (response.data && response.data.messages) {
+      // Ajouter la propriété isOwn à chaque message
+      const messagesWithOwnership = response.data.messages.map(message => ({
+        ...message,
+        isOwn: message.user_id === user.value.id,
+        is_own: message.user_id === user.value.id
+      }));
+      allMessages.value[conversationId] = messagesWithOwnership;
+    } else {
+      allMessages.value[conversationId] = [];
+    }
   } catch (error) {
+    console.error('Erreur lors du chargement des messages:', error);
     allMessages.value[conversationId] = [];
   }
 };
 
+// Vérifier les nouveaux messages via polling
+const checkForNewMessages = async () => {
+  if (!selectedConversation.value) return;
+
+  try {
+    const response = await axios.get(`/api/conversations/${selectedConversation.value.id}/messages?since=${lastMessageCheck.value.toISOString()}`);
+
+    if (response.data && response.data.messages && response.data.messages.length > 0) {
+      const newMessages = response.data.messages.map(message => ({
+        ...message,
+        isOwn: message.user_id === user.value.id,
+        is_own: message.user_id === user.value.id
+      }));
+
+      // Ajouter seulement les nouveaux messages
+      newMessages.forEach(newMessage => {
+        const existingMessage = allMessages.value[selectedConversation.value.id]?.find(msg => msg.id === newMessage.id);
+        if (!existingMessage) {
+          if (!allMessages.value[selectedConversation.value.id]) {
+            allMessages.value[selectedConversation.value.id] = [];
+          }
+          allMessages.value[selectedConversation.value.id].push(newMessage);
+
+          // Les messages des autres s'affichent automatiquement
+        }
+      });
+
+      scrollToBottom();
+      lastMessageCheck.value = new Date();
+    }
+  } catch (error) {
+    console.error('Erreur lors de la vérification des nouveaux messages:', error);
+  }
+};
+
+// Démarrer le polling
+const startPolling = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value);
+  }
+  pollingInterval.value = setInterval(checkForNewMessages, 2000); // Vérifier toutes les 2 secondes
+};
+
+// Arrêter le polling
+const stopPolling = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value);
+    pollingInterval.value = null;
+  }
+};
+
 // Créer une nouvelle conversation
-const createConversation = async (user) => {
+const createConversation = async (userToChat) => {
   const response = await axios.post('/api/conversations', {
-    user_id: user.id
+    user_id: userToChat.id
   });
 
   const newConversation = response.data;
@@ -870,6 +1045,14 @@ onMounted(async () => {
     } else {
       html.classList.remove('dark');
     }
+  }
+});
+
+// Nettoyer les connexions Pusher à la déconnexion
+onUnmounted(() => {
+  stopPolling(); // Arrêter le polling
+  if (currentConversationChannel && selectedConversation.value) {
+    unsubscribeFromConversation(selectedConversation.value.id);
   }
 });
 </script>
