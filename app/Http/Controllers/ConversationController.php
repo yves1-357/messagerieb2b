@@ -40,7 +40,7 @@ class ConversationController extends Controller
                                 'name' => $participant->name,
                                 'email' => $participant->email,
                                 'avatar' => $participant->avatar,
-                                'avatar_color' => $participant->avatar_color ?? '#8B5CF6',
+                                'avatar_color' => '#8B5CF6', // Couleur par défaut
                                 'is_online' => $participant->is_online ?? false,
                                 'last_seen_at' => $participant->last_seen_at,
                             ];
@@ -55,7 +55,7 @@ class ConversationController extends Controller
                     'id' => $conversation->id,
                     'name' => $otherParticipant?->name ?? 'Utilisateur supprimé',
                     'is_group' => false,
-                    'avatar_color' => $otherParticipant?->avatar_color ?? '#8B5CF6',
+                    'avatar_color' => '#8B5CF6', // Couleur par défaut
                     'last_message' => $conversation->lastMessage?->content ?? '',
                     'last_message_time' => $conversation->last_message_at?->diffForHumans() ?? '',
                     'formatted_time' => $conversation->last_message_at ? $conversation->last_message_at->format('H:i') : '',
@@ -68,7 +68,7 @@ class ConversationController extends Controller
                         'email' => $otherParticipant->email,
                         'status' => $otherParticipant->status,
                         'last_seen_at' => $otherParticipant->last_seen_at,
-                        'avatar_color' => $otherParticipant->avatar_color ?? '#8B5CF6',
+                        'avatar_color' => '#8B5CF6', // Couleur par défaut
                         'is_online' => $otherParticipant->is_online ?? false,
                     ] : null,
                 ];
