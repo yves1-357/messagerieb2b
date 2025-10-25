@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -70,6 +71,8 @@ Route::middleware('auth')->group(function () {
     // Routes pour les messages
     Route::get('/api/conversations/{conversation}/messages', [MessageController::class, 'index']);
     Route::post('/api/conversations/{conversation}/messages', [MessageController::class, 'store']);
+    Route::patch('/api/conversations/{conversation}/messages/read', [MessageController::class, 'markAsRead']);
+    Route::delete('/api/messages/{message}', [MessageController::class, 'destroy']);
 
     // Routes pour les utilisateurs
     Route::get('/api/users/search', [UserController::class, 'search']);
