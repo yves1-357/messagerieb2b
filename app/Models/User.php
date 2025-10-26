@@ -13,7 +13,7 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     /**
-     * The attributes that are mass assignable.
+     *
      *
      * @var list<string>
      */
@@ -22,10 +22,13 @@ class User extends Authenticatable
         'email',
         'password',
         'google_id',
+        'username',
+        'status',
+        'last_seen_at',
     ];
 
     /**
-     * The attributes that should be hidden for serialization.
+     * champs cachées.
      *
      * @var list<string>
      */
@@ -34,8 +37,8 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
+        /**
+     * convertit vers BD.
      *
      * @return array<string, string>
      */
@@ -44,6 +47,97 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'last_seen_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Determine if user est online
+     */
+    public function isOnline(): bool
+    {
+        return $this->status === 'online';
+    }
+
+    /**
+     *  status detaillée with time info
+     */
+    public function getStatusWithTime(): array
+    {
+        if ($this->status === 'online') {
+            return [
+                'status' => 'online',
+                'text' => 'en ligne',
+                'color' => 'green'
+            ];
+        }
+
+        if (!$this->last_seen_at) {
+            return [
+                'status' => 'offline',
+                'text' => 'hors ligne',
+                'color' => 'gray'
+            ];
+        }
+
+        $lastSeen = is_string($this->last_seen_at) ?
+            \Carbon\Carbon::parse($this->last_seen_at) :
+            $this->last_seen_at;
+
+        $minutesAgo = $lastSeen->diffInMinutes(now());
+
+        if ($minutesAgo < 1) {
+            return [
+                'status' => 'recently',
+                'text' => 'à l\'instant',
+                'color' => 'yellow'
+            ];
+        } elseif ($minutesAgo < 60) {
+            return [
+                'status' => 'recently',
+                'text' => "il y a {$minutesAgo} min",
+                'color' => 'yellow'
+            ];
+        } elseif ($minutesAgo < 1440) { // 24 hours
+            $hoursAgo = round($minutesAgo / 60);
+            return [
+                'status' => 'offline',
+                'text' => "il y a {$hoursAgo}h",
+                'color' => 'gray'
+            ];
+        } else {
+            $daysAgo = round($minutesAgo / 1440);
+            return [
+                'status' => 'offline',
+                'text' => "il y a {$daysAgo}j",
+                'color' => 'gray'
+            ];
+        }
+    }
+
+    /**
+     * Conversations où cet utilisateur participe
+     */
+    public function conversations()
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_user')
+                    ->withTimestamps()
+                    ->withPivot('joined_at', 'left_at');
+    }
+
+    /**
+     * Messages envoyés par cet utilisateur
+     */
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    /**
+     * Conversations créées par cet utilisateur
+     */
+    public function createdConversations()
+    {
+        return $this->hasMany(Conversation::class, 'created_by');
     }
 }

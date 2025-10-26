@@ -13,7 +13,14 @@ return new class extends Migration
     {
         Schema::create('conversation_user', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('conversation_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->timestamp('joined_at')->nullable();
+            $table->timestamp('left_at')->nullable();
             $table->timestamps();
+
+            // Index pour améliorer les performances
+            $table->unique(['conversation_id', 'user_id']);
         });
     }
 

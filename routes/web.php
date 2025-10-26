@@ -1,6 +1,10 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -14,7 +18,7 @@ Route::get('/health', function (): JsonResponse {
     return response()->json(['status' => 'ok'], 200);
 });
 
-// Routes d'authentification traditionnelle
+// Routes d'authentification
 Route::post('/register', [RegisteredUserController::class, 'register']);
 Route::post('/login', [RegisteredUserController::class, 'login'])->name('login');
 
@@ -57,6 +61,28 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Routes pour les conversations
+    Route::get('/api/conversations', [ConversationController::class, 'index']);
+    Route::post('/api/conversations', [ConversationController::class, 'store']);
+    Route::post('/api/conversations/group', [ConversationController::class, 'createGroup']);
+    Route::get('/api/conversations/{conversation}', [ConversationController::class, 'show']);
+
+    // Routes pour les messages
+    Route::get('/api/conversations/{conversation}/messages', [MessageController::class, 'index']);
+    Route::post('/api/conversations/{conversation}/messages', [MessageController::class, 'store']);
+    Route::patch('/api/conversations/{conversation}/messages/read', [MessageController::class, 'markAsRead']);
+    Route::delete('/api/messages/{message}', [MessageController::class, 'destroy']);
+
+    // Routes pour les utilisateurs
+    Route::get('/api/users/search', [UserController::class, 'search']);
+    Route::get('/api/users', [UserController::class, 'index']);
+    Route::get('/api/users/available', [UserController::class, 'getAvailableUsers']);
+
+    // Routes pour le système username
+    Route::patch('/api/user/username', [UserController::class, 'updateUsername']);
+    Route::post('/api/auth/logout', [UserController::class, 'logout']);
+    Route::delete('/api/user/account', [UserController::class, 'deleteAccount']);
 });
 
 // Route principale - Page d'authentification
@@ -64,7 +90,7 @@ Route::get('/', function () {
     return Inertia::render('Authpage');
 })->name('home');
 
-// Route catch-all pour SPA - DOIT ÊTRE EN DERNIER
+// Route catch-all pour SPA
 Route::get('/{any}', function () {
     return Inertia::render('Authpage');
 })->where('any', '.*');

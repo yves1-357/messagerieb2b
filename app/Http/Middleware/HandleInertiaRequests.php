@@ -8,18 +8,20 @@ use Inertia\Middleware;
 class HandleInertiaRequests extends Middleware
 {
     /**
-     * The root template that is loaded on the first page visit.
+     * The root template qui se partage au front.
      *
      * @var string
      */
-    protected $rootView = 'app';
+    protected $rootView = 'app'; // definit blade  qui charge l'appli vue
 
     /**
-     * Determine the current asset version.
+     * Determine la version courante.
      */
     public function version(Request $request): ?string
     {
         return parent::version($request);
+        // gere cache (css/js)
+        // force rechargement si fichier changent
     }
 
     /**
@@ -32,7 +34,9 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? $request->user()->only([
+                    'id', 'name', 'email', 'username', 'status', 'last_seen_at', 'created_at'
+                ]) : null,
             ],
         ];
     }

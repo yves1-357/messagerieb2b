@@ -13,35 +13,8 @@
 
         <!-- Scripts -->
         @routes
-        @php
-            $manifestPath = public_path('build/manifest.json');
-            if (file_exists($manifestPath)) {
-                $manifest = json_decode(file_get_contents($manifestPath), true);
-                $appEntry = $manifest['resources/js/app.js'] ?? null;
-            }
-        @endphp
-
-        @if(isset($appEntry))
-            {{-- CSS --}}
-            @if(isset($appEntry['css']))
-                @foreach($appEntry['css'] as $css)
-                    <link rel="stylesheet" href="{{ secure_asset('build/' . $css) }}">
-                @endforeach
-            @endif
-
-            {{-- Script principal --}}
-            <script type="module" src="{{ secure_asset('build/' . $appEntry['file']) }}"></script>
-
-            {{-- Données Inertia --}}
-            <script>
-                window.Laravel = {
-                    csrfToken: '{{ csrf_token() }}',
-                };
-            </script>
-        @else
-            {{-- Fallback vers Vite --}}
-            @vite(['resources/js/app.js'])
-        @endif        @inertiaHead
+        @vite(['resources/js/app.js'])
+        @inertiaHead
     </head>
     <body class="font-sans antialiased">
         @inertia
