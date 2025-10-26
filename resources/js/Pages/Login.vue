@@ -55,6 +55,7 @@ async function handleLogin() {
         return;
     }
 
+
     if(!email.value.includes('@')){
         alert('Veuillez entrez un email valide.');
         chargement.value = false;
