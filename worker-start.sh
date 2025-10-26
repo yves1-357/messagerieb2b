@@ -42,4 +42,4 @@ done
 
 # Démarrer le worker queue
 echo "Starting queue worker..."
-exec php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --timeout=60 --verbose
+exec php artisan queue:work --sleep=3 --tries=3 --timeout=60 --verbose
