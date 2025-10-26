@@ -16,17 +16,17 @@ echo "NPM version: $(npm --version)"
 echo "Current directory: $(pwd)"
 echo "Checking package.json..."
 if [ -f "package.json" ]; then
-    echo "✅ package.json exists"
+    echo "package.json exists"
     cat package.json | grep -A 5 -B 5 '"scripts"'
 else
-    echo "❌ package.json missing!"
+    echo "package.json missing!"
 fi
 
 echo "Checking node_modules..."
 if [ -d "node_modules" ]; then
-    echo "✅ node_modules exists"
+    echo "node_modules exists"
 else
-    echo "❌ node_modules missing! Installing..."
+    echo "node_modules missing! Installing..."
     npm install
 fi
 
@@ -64,7 +64,7 @@ fi
 
 echo "=== END ASSETS DEBUG ==="
 
-# Attendre que la base de données soit disponible (connexion seulement)
+# Attendre que la base de données soit disponible
 echo "Checking database connection..."
 until php artisan tinker --execute="DB::connection()->getPdo(); echo 'Connected';" >/dev/null 2>&1; do
   echo "Waiting for database..."
@@ -73,15 +73,15 @@ done
 
 echo "Database connected! Running migrations..."
 
-# Exécuter les migrations d'abord
+# Exécuter les migrations SANS --seed pour éviter l'erreur Faker
 echo "Running database migrations..."
-php artisan migrate --force
+php artisan migrate --force --isolated
 
-# Maintenant nettoyer et optimiser (après que les tables existent)
+# Nettoyer et optimiser (après que les tables existent)
 echo "Clearing caches..."
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
+php artisan config:clear || true
+php artisan cache:clear || true
+php artisan view:clear || true
 
 # Optimiser pour la production
 echo "Optimizing for production..."

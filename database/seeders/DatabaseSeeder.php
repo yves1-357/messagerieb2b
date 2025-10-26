@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -13,8 +12,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Ne rien faire en production
+        if (app()->environment('production')) {
+            $this->command->info('⚠️ Seeders désactivés en production');
+            return;
+        }
 
+        // Seeders seulement pour le développement local
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
