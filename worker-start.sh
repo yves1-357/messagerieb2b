@@ -18,8 +18,13 @@ echo "✅ Database connected!"
 # Vider les caches
 php artisan config:clear 2>/dev/null || true
 php artisan cache:clear 2>/dev/null || true
+php artisan view:clear 2>/dev/null || true
+
+# Démarrer le worker avec des logs verbeux
+export LOG_CHANNEL=stderr
+export APP_ENV=production
+export APP_DEBUG=true
 
 echo "🔄 Starting queue worker..."
 
-# Démarrer le worker avec des logs verbeux
-exec php artisan queue:work database --verbose --tries=3 --timeout=90 --sleep=3
+exec php artisan queue:work database --verbose --tries=1 --timeout=90 --sleep=3 --no-interaction
