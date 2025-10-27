@@ -83,7 +83,9 @@
 
               <button
                 @click="toggleNightMode"
-                class="w-full text-left px-4 py-2 text-white hover:bg-gray-600 transition-colors flex items-center justify-between"
+                :class="['w-full text-left px-4 py-2  transition-colors flex items-center justify-between',
+                  nightMode ? 'text-white hover:bg-gray-600' :
+                  'text-gray-700 hover:bg-gray-100']"
               >
                 <div class="flex items-center space-x-3">
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -93,9 +95,12 @@
                 </div>
                 <!-- Toggle switch -->
                 <div class="relative">
-                  <div class="w-10 h-6 bg-gray-600 rounded-full transition-colors" :class="{ 'bg-blue-600': nightMode }">
-                    <div class="w-5 h-5 bg-white rounded-full shadow-md transform transition-transform" :class="{ 'translate-x-4': nightMode }"></div>
-                  </div>
+                  <div :class="['w-10 h-6 rounded-full transition-colors',
+                    nightMode ? 'bg-blue-600' : 'bg-gray-600']">
+
+                    <div :class="['w-5 h-5 bg-white rounded-full shadow-md transform transition-transform',
+                        nightMode ? 'translate-x-4' : 'translate-x-0']"></div>
+                </div>
                 </div>
               </button>
             </div>
@@ -1076,7 +1081,24 @@ onUnmounted(() => {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari et Chrome */
 }
-.dark .bg-gray-800 {
-    background-color: #1a202c; /* Ex pr darkmode */
+/* Transitions douces pour le mode nuit */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* Animation pour le toast */
+.transform {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 </style>
