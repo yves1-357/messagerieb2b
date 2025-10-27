@@ -829,7 +829,7 @@ const performLogout = async () => {
   isLoggingOut.value = true;
 
   try {
-    await axios.post('/logout');
+    await axios.post('/api/auth/logout');
 
     // Rediriger vers la page d'accueil
     window.location.href = '/';
