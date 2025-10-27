@@ -1,8 +1,14 @@
-NODE_VERSION = "20"
 PHP_VERSION = "8.2"
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "php82", "php82Packages.composer"]
+cmds = [
+  "echo '=== Installing Node.js 20.19.0 ==='",
+  "curl -fsSL https://deb.nodesource.com/setup_20.x | bash -",
+  "apt-get install -y nodejs",
+  "echo 'Node.js version:' && node --version",
+  "echo 'npm version:' && npm --version"
+]
+nixPkgs = ["php82", "php82Packages.composer", "curl", "gnupg", "ca-certificates"]
 
 [phases.install]
 cmds = [
@@ -16,9 +22,6 @@ cmds = [
   "ls -la public/build/ || echo 'Build directory missing'",
   "echo '=== Build phase completed ==='"
 ]
-
-[phases.build]
-cmds = []
 
 [start]
 cmd = "bash start.sh"
