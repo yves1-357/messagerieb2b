@@ -698,16 +698,14 @@ const handleUserUpdated = (updatedUser) => {
 };
 
 const handleThemeChanged = (theme) => {
-  // Appliquer le thème au document
-  const html = document.documentElement;
-  if (theme === 'dark') {
-    html.classList.add('dark');
-  } else {
-    html.classList.remove('dark');
-  }
+  console.log('theme change to :', theme);
 
-  // Sauvegarder dans localStorage
-  localStorage.setItem('theme', theme);
+  //appliquer le theme globalement
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
 };
 
 const handleStartConversation = async (userToChat) => {

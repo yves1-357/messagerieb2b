@@ -528,6 +528,10 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
 
+onMounted(() => {
+    initializeTheme();
+})
+
 // Props
 const props = defineProps({
   conversations: {
@@ -541,7 +545,7 @@ const currentUser = computed(() => page.props.auth?.user);
 
 // État du composant
 const showMenu = ref(false);
-const nightMode = ref(true);
+const nightMode = ref(false);
 const searchQuery = ref('');
 const activeSearchTab = ref('chats'); // Pour les onglets Chats/Users dans la recherche
 const showSearchTabs = ref(false); // Pour afficher les onglets dès qu'on interagit avec la recherche
@@ -900,14 +904,35 @@ const performDeleteAccount = async () => {
   }
 };
 
+//initialiser depuis localstorage
+const initializeTheme = () => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark'){
+        nightMode.value = true;
+        document.documentElement.classList.add('dark');
+    } else {
+        nightMode.value = false;
+        document.documentElement.classList.remove('dark');
+    }
+}
+
 const toggleNightMode = () => {
   nightMode.value = !nightMode.value;
+
+  //appliquer theme
+  if (nightMode.value) {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
 
   // Émettre l'événement pour changer le thème global
   emit('theme-changed', nightMode.value ? 'dark' : 'light');
 
   // Optionnel : Sauvegarder dans localStorage
   localStorage.setItem('theme', nightMode.value ? 'dark' : 'light');
+
+  console.log('theme changé:', nightMode.value);
 };
 
 // Fermer le menu si clic à l'extérieur
