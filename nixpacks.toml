@@ -9,7 +9,7 @@ cmds = [
   "echo '=== Installing PHP dependencies ==='",
   "composer install --no-dev --optimize-autoloader",
   "echo '=== Installing Node.js dependencies ==='",
-  "npm ci --include=dev",
+  "npm install --include=dev",
   "echo '=== Building frontend assets ==='",
   "npm run build",
   "echo '=== Checking build output ==='",
