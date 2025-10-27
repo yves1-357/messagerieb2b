@@ -829,10 +829,27 @@ const performLogout = async () => {
   isLoggingOut.value = true;
 
   try {
-    await axios.post('/api/auth/logout');
+    //deconnecter pusher
+    if(window.Echo){
+        window.Echo.disconnect();
+    }
+
+    //Api logout
+    const response = await axios.post('/api/auth/logout', {}, {
+        timeout: 5000, // Timeout de 5 secondes
+      headers: {
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+
+    console.log('Log out reussie:', response.data);
 
     // Rediriger vers la page d'accueil
-    window.location.href = '/';
+    setTimeout(() => {
+        window.location.href = '/';
+    }, 100);
+
   } catch (error) {
     console.error('Erreur lors de la déconnexion:', error);
     // Même en cas d'erreur, rediriger (peut-être session expirée)
