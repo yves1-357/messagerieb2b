@@ -107,8 +107,9 @@ class UserController extends Controller
         $request->session()->regenerateToken();
 
         return response()->json([
-            'message' => 'Déconnexion réussie.'
-        ]);
+            'message' => 'Déconnexion réussie.',
+            'redirect' => '/login'
+        ], 200);
     }
 
     /**
