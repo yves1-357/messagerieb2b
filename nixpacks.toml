@@ -1,15 +1,13 @@
-[variables]
 NODE_VERSION = "20.19.0"
 PHP_VERSION = "8.2"
 
 [phases.setup]
 nixPkgs = ["nodejs_20", "php82", "php82Packages.composer"]
-aptPkgs = ["git", "curl", "libpng-dev", "libonig-dev", "libxml2-dev", "zip", "unzip"]
 
 [phases.install]
 cmds = [
   "echo '=== Installing PHP dependencies ==='",
-  "composer install --no-dev --optimize-autoloader --no-interaction",
+  "composer install --no-dev --optimize-autoloader",
   "echo '=== Installing Node.js dependencies ==='",
   "npm ci --include=dev",
   "echo '=== Building frontend assets ==='",
