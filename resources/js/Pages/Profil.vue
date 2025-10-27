@@ -1076,4 +1076,7 @@ onUnmounted(() => {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari et Chrome */
 }
+.dark .bg-gray-800 {
+    background-color: #1a202c; /* Ex pr darkmode */
+}
 </style>
