@@ -3,7 +3,7 @@ NODE_VERSION = "20.19.0"
 PHP_VERSION = "8.2"
 
 [phases.setup]
-nixPkgs = ["nodejs_20", "php82", "php82Packages.composer", "cacert"]
+nixPkgs = ["nodejs_20", "php82", "php82Packages.composer"]
 
 [phases.install]
 cmds = [
