@@ -1,24 +1,23 @@
+[variables]
+NODE_VERSION = "20.19.0"
 PHP_VERSION = "8.2"
 
 [phases.setup]
-cmds = [
-  "echo '=== Installing Node.js 20.19.0 ==='",
-  "curl -fsSL https://deb.nodesource.com/setup_20.x | bash -",
-  "apt-get install -y nodejs",
-  "echo 'Node.js version:' && node --version"
-]
-nixPkgs = ["php82", "php82Packages.composer", "curl"]
+nixPkgs = ["nodejs_20", "php82", "php82Packages.composer", "cacert"]
 
 [phases.install]
 cmds = [
   "echo '=== Installing PHP dependencies ==='",
-  "composer install --no-dev --optimize-autoloader",
+  "composer install --no-dev --optimize-autoloader --no-interaction",
   "echo '=== Installing Node.js dependencies ==='",
-  "npm install --include=dev",
+  "npm ci --include=dev",
   "echo '=== Building frontend assets ==='",
   "npm run build",
-  "echo '=== Build phase completed ==='"
+  "echo '=== Build completed ==='"
 ]
+
+[phases.build]
+cmds = []
 
 [start]
 cmd = "bash start.sh"
