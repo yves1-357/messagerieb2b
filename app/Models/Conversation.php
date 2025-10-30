@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 
 class Conversation extends Model
 {
@@ -76,4 +77,20 @@ class Conversation extends Model
         }
         return null;
     }
+
+    /**
+ * Obtenir le nombre de messages non lus pour un utilisateur
+ */
+public function getUnreadCountForUser($userId)
+{
+    return $this->messages()
+        ->where('user_id', '!=', $userId) // Messages envoyés par d'autres
+        ->whereNotExists(function ($query) use ($userId) {
+            $query->select(DB::raw(1))
+                ->from('message_reads')
+                ->whereColumn('message_reads.message_id', 'messages.id')
+                ->where('message_reads.user_id', $userId);
+        })
+        ->count();
+}
 }
