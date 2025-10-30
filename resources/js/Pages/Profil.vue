@@ -78,31 +78,6 @@
                 </svg>
                 <span>Settings</span>
               </button>
-
-              <div class="border-t border-gray-600 my-1"></div>
-
-              <button
-                @click="toggleNightMode"
-                :class="['w-full text-left px-4 py-2  transition-colors flex items-center justify-between',
-                  nightMode ? 'text-white hover:bg-gray-600' :
-                  'text-gray-700 hover:bg-gray-100']"
-              >
-                <div class="flex items-center space-x-3">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
-                  </svg>
-                  <span>Night Mode</span>
-                </div>
-                <!-- Toggle switch -->
-                <div class="relative">
-                  <div :class="['w-10 h-6 rounded-full transition-colors',
-                    nightMode ? 'bg-blue-600' : 'bg-gray-600']">
-
-                    <div :class="['w-5 h-5 bg-white rounded-full shadow-md transform transition-transform',
-                        nightMode ? 'translate-x-4' : 'translate-x-0']"></div>
-                </div>
-                </div>
-              </button>
             </div>
           </div>
         </div>
@@ -182,7 +157,9 @@
             </span>
           </button>
         </div>
-      </div>      <!-- Contenu des onglets (affiché dès qu'on interagit avec la recherche) -->
+      </div>
+
+      <!-- Contenu des onglets (affiché dès qu'on interagit avec la recherche) -->
       <div v-if="showSearchTabs" class="space-y-2 max-h-[60vh] overflow-y-auto scrollbar-hide">
         <!-- Onglet Chats -->
         <div v-if="activeSearchTab === 'chats'">
@@ -533,10 +510,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { usePage, router } from '@inertiajs/vue3';
 import axios from 'axios';
 
-onMounted(() => {
-    initializeTheme();
-})
-
 // Props
 const props = defineProps({
   conversations: {
@@ -550,10 +523,9 @@ const currentUser = computed(() => page.props.auth?.user);
 
 // État du composant
 const showMenu = ref(false);
-const nightMode = ref(false);
 const searchQuery = ref('');
-const activeSearchTab = ref('chats'); // Pour les onglets Chats/Users dans la recherche
-const showSearchTabs = ref(false); // Pour afficher les onglets dès qu'on interagit avec la recherche
+const activeSearchTab = ref('chats');
+const showSearchTabs = ref(false);
 const menuDropdown = ref(null);
 
 // Variables pour la gestion des utilisateurs disponibles
@@ -587,7 +559,7 @@ const deletePassword = ref('');
 const deletePasswordError = ref('');
 const isDeletingAccount = ref(false);
 
-// État pour le toast de succès
+// État pour le toast de succès/acces
 const showSuccessToast = ref(false);
 const successMessage = ref('');
 
@@ -611,12 +583,11 @@ const getInitials = (name) => {
 // Computed pour calculer le total des messages non lus
 const totalUnreadCount = computed(() => {
   if (!props.conversations || props.conversations.length === 0) {
-    // Données par défaut si aucune conversation n'est passée
-    return 1; // EX: Carmen Goina a 1 message non lu dans les données par défaut
+    return 0;
   }
 
   return props.conversations.reduce((total, conversation) => {
-    return total + (conversation.unreadCount || 0);
+    return total + ((conversation.unread_count || conversation.unreadCount) || 0);
   }, 0);
 });
 
@@ -633,12 +604,10 @@ const filteredConversations = computed(() => {
 
 // Computed pour filtrer les utilisateurs selon la recherche et l'onglet actif
 const filteredUsers = computed(() => {
-  // Si on est dans l'onglet Users, on montre TOUS les utilisateurs chargés
   if (activeSearchTab.value === 'users') {
     return availableUsers.value;
   }
 
-  // Sinon, filtrage normal par recherche
   if (!searchQuery.value.trim()) {
     return availableUsers.value;
   }
@@ -658,13 +627,11 @@ const handleMenuAction = (action) => {
   if (action === 'settings') {
     openSettingsModal();
   } else if (action === 'myProfile') {
-    // Émettre un événement pour afficher le UserInfo dans Chat.vue avec l'utilisateur actuel
     emit('show-user-info', { user: currentUser.value });
   } else if (action === 'contacts') {
     openContactsModal();
   } else {
     console.log(`Action: ${action}`);
-    // à faire : Implémenter les autres actions du menu
   }
   showMenu.value = false;
 };
@@ -672,13 +639,12 @@ const handleMenuAction = (action) => {
 // Méthodes pour la gestion des onglets de recherche
 const closeSearchTabs = () => {
   showSearchTabs.value = false;
-  searchQuery.value = ''; // Réinitialiser la recherche
-  activeSearchTab.value = 'chats'; // Revenir à l'onglet Chats par défaut
+  searchQuery.value = '';
+  activeSearchTab.value = 'chats';
 };
 
 // Fermer les onglets si clic à l'extérieur
 const handleClickOutsideSearch = (event) => {
-  // Vérifier si le clic est en dehors de la zone de recherche et des onglets
   const searchContainer = event.target.closest('.search-container');
   if (!searchContainer && showSearchTabs.value) {
     closeSearchTabs();
@@ -689,7 +655,6 @@ const handleClickOutsideSearch = (event) => {
 const openSettingsModal = () => {
   showSettingsModal.value = true;
   newUsername.value = currentUser.value?.username || '';
-  // Reset des erreurs
   usernameError.value = '';
   usernameSuccess.value = '';
 };
@@ -699,17 +664,6 @@ const closeSettingsModal = () => {
   newUsername.value = '';
   usernameError.value = '';
   usernameSuccess.value = '';
-};
-
-// Méthodes pour le modal UserInfo
-// Méthode pour formatter la date d'inscription
-const formatJoinDate = (dateString) => {
-  if (!dateString) return 'Date inconnue';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'long'
-  });
 };
 
 // Méthodes pour le modal Contacts
@@ -749,10 +703,7 @@ const searchUsers = async () => {
 
 // Fonction pour démarrer une conversation avec un utilisateur
 const startConversation = (user) => {
-  // Fermer le modal des contacts
   closeContactsModal();
-
-  // Émettre l'événement pour démarrer la conversation
   emit('start-conversation', user);
 };
 
@@ -760,7 +711,6 @@ const startConversation = (user) => {
 const existingContacts = computed(() => {
   if (!props.conversations || props.conversations.length === 0) return [];
 
-  // Extraire les utilisateurs uniques des conversations
   const contacts = [];
   props.conversations.forEach(conversation => {
     if (conversation.users) {
@@ -788,13 +738,8 @@ const updateUsername = async () => {
       username: newUsername.value.trim()
     });
 
-    // Émettre l'événement de mise à jour utilisateur
     emit('user-updated', response.data.user);
-
-    // Fermer le modal Settings
     closeSettingsModal();
-
-    // Afficher le toast de succès
     showSuccessMessage('Username updated successfully!');
 
   } catch (error) {
@@ -810,12 +755,11 @@ const updateUsername = async () => {
   }
 };
 
-// Méthode pour afficher le toast de succès
+// Méthode pour afficher le toast de succès/accès
 const showSuccessMessage = (message) => {
   successMessage.value = message;
   showSuccessToast.value = true;
 
-  // Masquer le pop-up après 2 secondes
   setTimeout(() => {
     showSuccessToast.value = false;
   }, 2000);
@@ -823,13 +767,11 @@ const showSuccessMessage = (message) => {
 
 // Méthodes pour logout
 const confirmLogout = () => {
-  // Fermer le modal Settings et ouvrir le modal de confirmation
   showSettingsModal.value = false;
   showLogoutConfirm.value = true;
 };
 
 const cancelLogout = () => {
-  // Retourner au modal Settings
   showLogoutConfirm.value = false;
   showSettingsModal.value = true;
 };
@@ -838,30 +780,26 @@ const performLogout = async () => {
   isLoggingOut.value = true;
 
   try {
-    //deconnecter pusher
     if(window.Echo){
         window.Echo.disconnect();
     }
 
-    //Api logout
     const response = await axios.post('/api/auth/logout', {}, {
-        timeout: 5000, // Timeout de 5 secondes
+      timeout: 5000,
       headers: {
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest'
       }
     });
 
-    console.log('Log out reussie:', response.data);
+    console.log('Logout réussi:', response.data);
 
-    // Rediriger vers la page d'accueil
     setTimeout(() => {
         window.location.href = '/';
     }, 100);
 
   } catch (error) {
     console.error('Erreur lors de la déconnexion:', error);
-    // Même en cas d'erreur, rediriger (peut-être session expirée)
     window.location.href = '/';
   } finally {
     isLoggingOut.value = false;
@@ -870,7 +808,6 @@ const performLogout = async () => {
 
 // Méthodes pour delete account
 const confirmDeleteAccount = () => {
-  // Fermer le modal Settings et ouvrir le modal de confirmation
   showSettingsModal.value = false;
   showDeleteConfirm.value = true;
   deletePassword.value = '';
@@ -878,7 +815,6 @@ const confirmDeleteAccount = () => {
 };
 
 const cancelDeleteAccount = () => {
-  // Retourner au modal Settings
   showDeleteConfirm.value = false;
   showSettingsModal.value = true;
   deletePassword.value = '';
@@ -896,7 +832,6 @@ const performDeleteAccount = async () => {
       data: { password: deletePassword.value }
     });
 
-    // Rediriger vers la page d'accueil après suppression
     window.location.href = '/';
   } catch (error) {
     if (error.response?.data?.message) {
@@ -909,37 +844,6 @@ const performDeleteAccount = async () => {
   }
 };
 
-//initialiser depuis localstorage
-const initializeTheme = () => {
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark'){
-        nightMode.value = true;
-        document.documentElement.classList.add('dark');
-    } else {
-        nightMode.value = false;
-        document.documentElement.classList.remove('dark');
-    }
-}
-
-const toggleNightMode = () => {
-  nightMode.value = !nightMode.value;
-
-  //appliquer theme
-  if (nightMode.value) {
-    document.documentElement.classList.add('dark');
-  } else {
-    document.documentElement.classList.remove('dark');
-  }
-
-  // Émettre l'événement pour changer le thème global
-  emit('theme-changed', nightMode.value ? 'dark' : 'light');
-
-  // Optionnel : Sauvegarder dans localStorage
-  localStorage.setItem('theme', nightMode.value ? 'dark' : 'light');
-
-  console.log('theme changé:', nightMode.value);
-};
-
 // Fermer le menu si clic à l'extérieur
 const handleClickOutside = (event) => {
   if (menuDropdown.value && !menuDropdown.value.contains(event.target) && !event.target.closest('button')) {
@@ -947,69 +851,23 @@ const handleClickOutside = (event) => {
   }
 };
 
-// ========================
-// GESTION DES UTILISATEURS DISPONIBLES (pour les onglets)
-// ========================
-
-// Charger TOUS les utilisateurs disponibles (sans filtre de recherche)
+// Charger TOUS les utilisateurs disponibles
 const loadAllUsers = async (page = 1) => {
   try {
     isLoadingUsers.value = true;
     const response = await axios.get('/api/users/available', {
-      params: {
-        page
-        // Pas de search : on charge TOUS les utilisateurs
-      }
+      params: { page }
     });
 
     const result = response.data;
     const newUsers = result.users || [];
 
     if (page === 1) {
-      // Première page : remplacer
       availableUsers.value = newUsers;
     } else {
-      // Pages suivantes : ajouter
       availableUsers.value = [...availableUsers.value, ...newUsers];
     }
 
-    // Gérer la pagination
-    if (result.pagination) {
-      hasMoreUsers.value = result.pagination.has_next_page;
-      usersPage.value = page;
-    }
-
-  } catch (error) {
-    console.error('Erreur lors du chargement des utilisateurs:', error);
-    if (page === 1) availableUsers.value = [];
-  } finally {
-    isLoadingUsers.value = false;
-  }
-};
-
-// Charger les utilisateurs disponibles pour les onglets (avec recherche)
-const loadAvailableUsers = async (page = 1) => {
-  try {
-    isLoadingUsers.value = true;
-    const response = await axios.get('/api/users/available', {
-      params: {
-        page,
-        search: searchQuery.value
-      }
-    });
-
-    const result = response.data;
-    const newUsers = result.users || [];
-
-    if (page === 1) {
-      // Première page : remplacer
-      availableUsers.value = newUsers;
-    } else {
-      // Pages suivantes : ajouter
-      availableUsers.value = [...availableUsers.value, ...newUsers];
-    }
-
-    // Gérer la pagination
     if (result.pagination) {
       hasMoreUsers.value = result.pagination.has_next_page;
       usersPage.value = page;
@@ -1030,39 +888,23 @@ const loadMoreUsers = async () => {
   }
 };
 
-// Démarrer une conversation avec un utilisateur depuis les onglets
-const startConversationWithUser = async (user) => {
-  emit('start-conversation', user);
-  // Fermer les onglets et revenir au menu principal après avoir créé la conversation
-  closeSearchTabs();
-};
-
 // Afficher les informations d'un utilisateur
 const showUserInfo = (user) => {
   emit('show-user-info', { user });
 };
 
 // Events
-const emit = defineEmits(['search', 'user-updated', 'theme-changed', 'show-user-info', 'start-conversation', 'load-more-users']);
+const emit = defineEmits(['search', 'user-updated', 'show-user-info', 'start-conversation']);
 
 // Watch pour émettre les changements de recherche
 const emitSearch = () => {
   emit('search', searchQuery.value);
-
-  // Si on recherche et qu'on est dans l'onglet Chats, filtrer les conversations
-  // L'onglet Users affiche toujours tous les utilisateurs chargés
 };
 
 // Lifecycle
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
   document.addEventListener('click', handleClickOutsideSearch);
-
-  // Initialiser le thème depuis localStorage
-  const savedTheme = localStorage.getItem('theme');
-  if (savedTheme) {
-    nightMode.value = savedTheme === 'dark';
-  }
 });
 
 onUnmounted(() => {
@@ -1074,16 +916,12 @@ onUnmounted(() => {
 <style scoped>
 /* Masquer la scrollbar pour un look professionnel */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* Internet Explorer 10+ */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Safari et Chrome */
-}
-/* Transitions douces pour le mode nuit */
-* {
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  display: none;
 }
 
 /* Animation pour le toast */
