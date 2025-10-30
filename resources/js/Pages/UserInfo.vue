@@ -137,7 +137,9 @@
           </svg>
           <div class="flex-1">
             <p class="text-xs text-gray-400">Nom d'utilisateur</p>
-            <p class="text-white">{{ user.username ? '@' + user.username : '@Loredana667' }}</p>
+            <p class="text-white">
+              {{ user.username ? (user.username.startsWith('@') ? user.username : '@' + user.username) : (user.name ? user.name : '') }}
+            </p>
           </div>
         </div>
       </div>
