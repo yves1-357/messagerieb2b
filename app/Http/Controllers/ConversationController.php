@@ -32,8 +32,9 @@ class ConversationController extends Controller
                         'avatar_color' => '#10B981', // Couleur verte pour les groupes
                         'last_message' => $conversation->lastMessage?->content ?? '',
                         'last_message_time' => $conversation->last_message_at?->diffForHumans() ?? '',
-                        'formatted_time' => $conversation->last_message_at ? $conversation->last_message_at->format('H:i') : '',
-                        'unread_count' => 0, // à implémenter le comptage des non-lus
+                        'formatted_time' => $conversation->last_message_at ? $conversation->last_message_at->format('H:i') :
+                            $conversation->updated_at->format('H:i'),
+                        'unread_count' => $conversation->getUnreadCountForUser($user->id),
                         'users' => $conversation->users->map(function ($participant) {
                             return [
                                 'id' => $participant->id,
@@ -58,9 +59,10 @@ class ConversationController extends Controller
                     'avatar_color' => '#8B5CF6', // Couleur par défaut
                     'last_message' => $conversation->lastMessage?->content ?? '',
                     'last_message_time' => $conversation->last_message_at?->diffForHumans() ?? '',
-                    'formatted_time' => $conversation->last_message_at ? $conversation->last_message_at->format('H:i') : '',
+                    'formatted_time' => $conversation->last_message_at ? $conversation->last_message_at->format('H:i')
+                    :$conversation->updated_at->format('H:i'),
                     'is_online' => $otherParticipant?->isOnline() ?? false,
-                    'unread_count' => 0, // à implémenter le comptage des non-lus
+                    'unread_count' => $conversation->getUnreadCountForUser($user->id),
                     'other_user' => $otherParticipant ? [
                         'id' => $otherParticipant->id,
                         'name' => $otherParticipant->name,
@@ -310,4 +312,44 @@ class ConversationController extends Controller
             'messages' => $messages
         ]);
     }
+
+    /**
+ * Marquer tous les messages d'une conversation comme lus
+ */
+public function markAsRead($id)
+{
+    $user = Auth::user();
+
+    $conversation = Conversation::forUser($user->id)->findOrFail($id);
+
+    // Récupérer tous les messages non lus de cette conversation
+    $unreadMessages = $conversation->messages()
+        ->where('user_id', '!=', $user->id) // Messages des autres
+        ->whereNotExists(function ($query) use ($user) {
+            $query->select(DB::raw(1))
+                ->from('message_reads')
+                ->whereColumn('message_reads.message_id', 'messages.id')
+                ->where('message_reads.user_id', $user->id);
+        })
+        ->pluck('id');
+
+    // Marquer tous ces messages comme lus
+    foreach ($unreadMessages as $messageId) {
+        \App\Models\MessageRead::updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'message_id' => $messageId,
+            ],
+            [
+                'conversation_id' => $id,
+                'read_at' => now(),
+            ]
+        );
+    }
+
+    return response()->json([
+        'success' => true,
+        'marked_count' => $unreadMessages->count()
+    ]);
+}
 }

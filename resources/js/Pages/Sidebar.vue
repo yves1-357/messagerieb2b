@@ -69,74 +69,93 @@
       </div>
 
       <!-- Liste des conversations -->
-      <div v-else>
+<div v-else>
+  <div
+    v-for="conversation in filteredConversations"
+    :key="conversation.id"
+    @click="selectConversation(conversation)"
+    class="p-3 hover:bg-gray-700 cursor-pointer transition-colors"
+    :class="{ 'bg-gray-700 border-l-4 border-l-blue-500': selectedConversationId === conversation.id }"
+  >
+    <div class="flex items-center space-x-3">
+
+      <!-- Avatar -->
+      <div class="relative flex-shrink-0">
         <div
-          v-for="conversation in filteredConversations"
-          :key="conversation.id"
-          @click="selectConversation(conversation)"
-          class="p-3 hover:bg-gray-700 cursor-pointer transition-colors"
-          :class="{ 'bg-gray-700 border-l-4 border-l-blue-500': selectedConversationId === conversation.id }"
+          class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm relative"
+          :style="{ backgroundColor: conversation.avatar_color || conversation.avatarColor || '#8B5CF6' }"
         >
-          <div class="flex items-center space-x-3">
-            <!-- Avatar -->
-            <div class="relative flex-shrink-0">
-              <div
-                class="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-sm relative"
-                :style="{ backgroundColor: conversation.avatar_color || conversation.avatarColor || '#8B5CF6' }"
-              >
-                <!-- Icône de groupe si c'est un groupe -->
-                <svg v-if="conversation.is_group" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
-                </svg>
-                <!-- Initiales pour les conversations privées -->
-                <span v-else>{{ getInitials(conversation.name) }}</span>
-              </div>
+          <!-- Icône de groupe si c'est un groupe -->
+          <svg v-if="conversation.is_group" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"/>
+          </svg>
+          <!-- Initiales pour les conversations privées -->
+          <span v-else>{{ getInitials(conversation.name) }}</span>
+        </div>
 
-              <!-- Indicateur en ligne (seulement pour les conversations privées) -->
-              <div
-                v-if="!conversation.is_group && (conversation.is_online || conversation.isOnline)"
-                class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-gray-800 rounded-full"
-              ></div>
+        <!-- Indicateur en ligne (seulement pour les conversations privées) -->
+        <div
+          v-if="!conversation.is_group && (conversation.is_online || conversation.isOnline)"
+          class="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-gray-800 rounded-full"
+        ></div>
 
-              <!-- Badge nombre de participants pour les groupes -->
-              <div
-                v-if="conversation.is_group && conversation.participants_count"
-                class="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-blue-500 border-2 border-gray-800 rounded-full flex items-center justify-center"
-              >
-                <span class="text-xs font-bold text-white">{{ conversation.participants_count }}</span>
-              </div>
-            </div>
+        <!-- Badge nombre de participants pour les groupes -->
+        <div
+          v-if="conversation.is_group && conversation.participants_count"
+          class="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-blue-500 border-2 border-gray-800 rounded-full flex items-center justify-center"
+        >
+          <span class="text-xs font-bold text-white">{{ conversation.participants_count }}</span>
+        </div>
+      </div>
 
-            <!-- Informations conversation -->
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center justify-between">
-                <span class="font-medium text-white truncate">{{ conversation.name }}</span>
-                <span class="text-xs text-gray-400 flex-shrink-0">
-                  {{ formatTime(conversation.last_message_time || conversation.lastMessageTime) }}
-                </span>
-              </div>
+      <!-- Informations conversation -->
+      <div class="flex-1 min-w-0">
+        <!-- Ligne 1: Nom + Heure -->
+        <div class="flex items-center justify-between mb-1">
+          <span class="font-medium text-white truncate">{{ conversation.name }}</span>
+          <span
+            class="text-xs flex-shrink-0 ml-2"
+            :class="(conversation.unread_count || conversation.unreadCount || 0) > 0 ? 'text-blue-400 font-medium' : 'text-gray-400'"
+          >
+            {{ formatTime(conversation.last_message_time || conversation.lastMessageTime) }}
+          </span>
+        </div>
 
-              <div class="flex items-center justify-between mt-1">
-                <div class="flex items-center space-x-1 flex-1 min-w-0">
-                  <!-- Icône de statut du message -->
-                  <svg v-if="conversation.last_message_from_me || conversation.lastMessageFromMe" class="w-3 h-3 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                  </svg>
+        <!-- Ligne 2: Message + Badge -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-1 flex-1 min-w-0">
+            <!-- Icône de statut du message -->
+            <svg v-if="conversation.last_message_from_me || conversation.lastMessageFromMe" class="w-3 h-3 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
 
-                  <span class="text-sm text-gray-400 truncate">
-                    {{ conversation.last_message || conversation.lastMessage || 'Aucun message' }}
-                  </span>
-                </div>
+            <span
+              class="text-sm truncate"
+              :class="(conversation.unread_count || conversation.unreadCount || 0) > 0 ? 'text-white font-medium' : 'text-gray-400'"
+            >
+              {{ conversation.last_message || conversation.lastMessage || 'Aucun message' }}
+            </span>
+          </div>
 
-                <!-- Badge messages non lus -->
-                <div v-if="(conversation.unread_count || conversation.unreadCount || 0) > 0" class="bg-blue-500 text-white text-xs rounded-full px-2 py-0.5 min-w-[1.25rem] text-center flex-shrink-0 ml-2">
-                  {{ (conversation.unread_count || conversation.unreadCount) > 99 ? '99+' : (conversation.unread_count || conversation.unreadCount) }}
-                </div>
-              </div>
-            </div>
+          <span
+  class="text-xs flex-shrink-0 ml-2"
+  :class="(conversation.unread_count || conversation.unreadCount || 0) > 0 ? 'text-blue-400 font-medium' : 'text-gray-400'"
+>
+  {{ formatTime(conversation.formatted_time) || conversation.last_message_time || conversation.update }}
+</span>
+
+          <!-- Badge messages non lus - aligné avec message -->
+          <div
+            v-if="(conversation.unread_count || conversation.unreadCount || 0) > 0"
+            class="bg-blue-500 text-white text-xs font-semibold rounded-full min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center flex-shrink-0 ml-2"
+          >
+            {{ (conversation.unread_count || conversation.unreadCount) > 99 ? '99+' : (conversation.unread_count || conversation.unreadCount) }}
           </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
     </div>
   </div>
 </template><script setup>
@@ -192,21 +211,52 @@ const getInitials = (name) => {
 
 const formatTime = (timestamp) => {
   if (!timestamp) return '';
+
   const date = new Date(timestamp);
+  if (isNaN(date.getTime())) return ''; // vérifie si date valide
+
   const now = new Date();
   const diff = now - date;
 
-  if (diff < 24 * 60 * 60 * 1000) {
-    // Moins de 24h : afficher l'heure
-    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-  } else if (diff < 7 * 24 * 60 * 60 * 1000) {
-    // Moins de 7 jours : afficher le jour
-    const days = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-    return days[date.getDay()];
-  } else {
-    // Plus de 7 jours : afficher la date
-    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+
+  if (diff < 60000) return 'Now'; // moins d'1 minute
+
+  if (diff < 3600000) {
+    const minutes = Math.floor(diff / 60000);
+    return `${minutes}m`; //moins d'1heure
   }
+
+  // Aujourd'hui (moins de 24h)
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) {
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+
+  // Hier
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  }
+
+  // Cette semaine (moins de 7 jours)
+  if (diff < 604800000) {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[date.getDay()];
+  }
+
+  // Plus ancien - afficher la date
+  const currentYear = now.getFullYear();
+  const messageYear = date.getFullYear();
+
+  if (currentYear === messageYear) {
+    // Même année : afficher jour/mois (ex: "15 Oct")
+    return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+  }
+
+  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+
 };
 
 const selectConversation = (conversation) => {

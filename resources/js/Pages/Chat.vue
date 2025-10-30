@@ -119,7 +119,9 @@
                 </span>
               </div>
 
-              <div v-for="message in currentMessages" :key="message.id" class="flex" :class="{ 'justify-end': message.isOwn, 'justify-start': !message.isOwn }">
+              <TransitionGroup name="message" tag="div" class="space-y-4">
+              <div v-for="message in currentMessages" :key="message.id"
+              class="flex" :class="{ 'justify-end': message.isOwn, 'justify-start': !message.isOwn }">
 
                 <!-- Mes messages (à droite, bleu) -->
                 <div v-if="message.isOwn" class="flex items-end justify-end space-x-2 max-w-md ml-auto">
@@ -151,6 +153,7 @@
                   </div>
                 </div>
               </div>
+            </TransitionGroup>
             </div>
           </div>
         </div>
@@ -561,6 +564,20 @@ const selectConversation = async (conversation) => {
 
   selectedConversation.value = conversation;
   showUserInfo.value = false; // Fermer le panel utilisateur
+
+  // Marquer les messages comme lus
+  try {
+    await axios.post(`/api/conversations/${conversation.id}/mark-as-read`);
+
+    // Mettre à jour le compteur localement
+    const conversationIndex = conversations.value.findIndex(conv => conv.id === conversation.id);
+    if (conversationIndex !== -1) {
+      conversations.value[conversationIndex].unread_count = 0;
+      conversations.value[conversationIndex].unreadCount = 0;
+    }
+  } catch (error) {
+    console.error('Erreur lors du marquage comme lu:', error);
+  }
 
   // Charger les messages de cette conversation si pas encore chargés
   if (!allMessages.value[conversation.id]) {
@@ -1065,4 +1082,19 @@ onUnmounted(() => {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
 }
+.message-enter-active {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 </style>
