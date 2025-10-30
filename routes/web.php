@@ -67,6 +67,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/conversations', [ConversationController::class, 'store']);
     Route::post('/api/conversations/group', [ConversationController::class, 'createGroup']);
     Route::get('/api/conversations/{conversation}', [ConversationController::class, 'show']);
+    // Marquer une conversation comme lue
+Route::post('/api/conversations/{id}/mark-as-read', [ConversationController::class, 'markAsRead']);
 
     // Routes pour les messages
     Route::get('/api/conversations/{conversation}/messages', [MessageController::class, 'index']);
