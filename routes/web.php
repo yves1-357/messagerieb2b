@@ -34,7 +34,7 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-// Route Chat principale
+// Route du Chat principal
 Route::get('/chat', function () {
     // Vérifier l'authentification Laravel standard
     if (!Auth::check()) {
