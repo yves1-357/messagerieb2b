@@ -60,7 +60,7 @@ class User extends Authenticatable
     }
 
     /**
-     *  status detaillée with time info
+     *  statut detaillé avec withtime
      */
     public function getStatusWithTime(): array
     {
