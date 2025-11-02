@@ -1,61 +1,55 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# QuickChat - Application de messagerie instantanée
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+QuickChat est une application web de messagerie instantanée moderne, développée avec Laravel et Vue.js, permettant de communiquer facilement et en toute sécurité avec vos proches, collègues ou groupes de travail.
 
-## About Laravel
+## Fonctionnalités principales
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Messages instantanés et sécurisés** : Envoyez et recevez des messages en temps réel grâce à une interface fluide et moderne.
+- **Notifications en temps réel** : Recevez des notifications instantanées lors de la réception de nouveaux messages.
+- **Groupes et canaux de discussion** : Créez des groupes pour échanger à plusieurs, partagez des fichiers, images et liens.
+- **Gestion des contacts** : Recherchez des utilisateurs, démarrez de nouvelles conversations, ajoutez des contacts.
+- **Profil utilisateur** : Personnalisez votre profil, modifiez votre nom d'utilisateur, gérez vos paramètres et votre sécurité.
+- **Interface responsive** : Profitez d'une expérience optimale sur ordinateur comme sur mobile.
+- **Sécurité** : Authentification sécurisée, gestion des sessions, et respect de la vie privée.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Technologies utilisées
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Backend** : Laravel (PHP)
+- **Frontend** : Vue.js
+- **Notifications temps réel** : Pusher
+- **Base de données** : MySQL
+- **Autres** : Axios, Inertia.js, Tailwind CSS
 
-## Learning Laravel
+## Installation
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+1. Clonez le dépôt :
+	git clone https://github.com/yves1-357/messagerieb2b.git
+2. Installez les dépendances backend :
+	composer install
+3. Installez les dépendances frontend :
+	npm install
+4. Configurez votre fichier `.env` et générez la clé d'application :
+	cp .env.example .env
+	php artisan key:generate
+5. Lancez le serveur de développement :
+	php artisan serve
+	npm run dev
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Déploiement sur Railway
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+L'application est déployée automatiquement sur Railway, une plateforme cloud moderne pour héberger des applications web et des bases de données.
 
-## Laravel Sponsors
+- **Accès en ligne** : [https://web-production-f9b8.up.railway.app/]
+- Le déploiement utilise les fichiers `railway.json`, `web-start.sh` et `worker-start.sh` pour automatiser la configuration, la build des assets et le lancement des workers Laravel.
+- Chaque push sur la branche principale déclenche un déploiement automatique.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Pour déployer sur votre propre Railway :
+1. Créez un projet sur [Railway](https://railway.app/).
+2. Connectez votre dépôt GitHub.
+3. Ajoutez les variables d'environnement nécessaires dans le dashboard Railway.
+4. Les scripts de démarrage (`web-start.sh` et `worker-start.sh`) gèrent la préparation de l'environnement, la build, les migrations et le lancement de l'application.
 
-### Premium Partners
+## Auteurs
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- yves1-357
+- RandyKoke
